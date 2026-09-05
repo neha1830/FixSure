@@ -18,8 +18,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fixsure
+          POSTGRES_PASSWORD: fixsure
+          POSTGRES_DB: fixsure
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixsure -d fixsure"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DATABASE_URL: "file:./ci.db"
+      DATABASE_URL: "postgresql://fixsure:fixsure@localhost:5432/fixsure"
       ADMIN_PASSWORD: "ci-check-only"
       WHATSAPP_MODE: "mock"
       STORE_NAME: "FixSure"
@@ -43,7 +58,7 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Prisma db push (CI sqlite)
+      - name: Prisma db push
         run: npx prisma db push --skip-generate
 
       - name: ESLint

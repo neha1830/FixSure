@@ -32,7 +32,7 @@ const getCachedApprovedReviews = unstable_cache(
       take,
     }),
   ["reviews-approved"],
-  { tags: [CACHE_TAGS.reviews], revalidate: 300 }
+  { tags: [CACHE_TAGS.reviews], revalidate: 60 }
 );
 
 export const getGalleryPreview = cache(() => getCachedGalleryPreview());

@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { getStoreSettings } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Before & after gallery — FixSure",
-  description:
-    "Real repair photos published only with customer consent.",
-};
+export async function generateMetadata() {
+  const store = await getStoreSettings();
+  return {
+    title: `Before & after gallery — ${store.name}`,
+    description: "Real repair photos published only with customer consent.",
+  };
+}
 
 export default async function GalleryPage() {
   const items = await prisma.galleryItem.findMany({

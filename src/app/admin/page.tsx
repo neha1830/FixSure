@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { REPAIR_STATUSES, STATUS_LABELS, RepairStatus, WHATSAPP_NOTIFY_STATUSES } from "@/lib/store";
 import { ScenarioManager, Scenario } from "@/components/ScenarioManager";
 import { GalleryManager, GalleryItem } from "@/components/GalleryManager";
+import { ContentManager, ContentItem } from "@/components/ContentManager";
 
 type Repair = {
   id: string;
@@ -12,6 +13,11 @@ type Repair = {
   phoneNumber: string;
   brand: string;
   model: string;
+  deviceType?: string;
+  serviceMode?: string;
+  serviceAddress?: string | null;
+  preferredDate?: string | null;
+  preferredTime?: string | null;
   issueCategory: string;
   issueDescription: string;
   status: string;
@@ -35,6 +41,27 @@ type Sell = {
   createdAt: string;
 };
 
+type Contact = {
+  id: string;
+  name: string;
+  email: string | null;
+  phoneNumber: string | null;
+  message: string;
+  status: string;
+  createdAt: string;
+};
+
+type Review = {
+  id: string;
+  name: string;
+  device: string | null;
+  rating: number;
+  body: string;
+  phoneNumber: string | null;
+  status: string;
+  createdAt: string;
+};
+
 type WaLog = {
   id: string;
   phoneNumber: string;
@@ -50,6 +77,46 @@ type StoreForm = {
   phone: string;
   hours: string;
   mapsUrl: string;
+  heroHeadline: string;
+  heroSubtext: string;
+  heroBadge: string;
+  seoTitle: string;
+  seoDescription: string;
+  trustIntro: string;
+  privacyBlurb: string;
+  warrantyDays: string;
+  doorstepMinutes: string;
+  priceLockDays: string;
+  doorstepFee: string;
+  requestValidDays: string;
+  ctaPrimaryLabel: string;
+  ctaPrimaryHref: string;
+  ctaSecondaryLabel: string;
+  ctaSecondaryHref: string;
+};
+
+const emptyStore: StoreForm = {
+  name: "PhoneRepairO",
+  address: "",
+  phone: "",
+  hours: "",
+  mapsUrl: "",
+  heroHeadline: "",
+  heroSubtext: "",
+  heroBadge: "",
+  seoTitle: "",
+  seoDescription: "",
+  trustIntro: "",
+  privacyBlurb: "",
+  warrantyDays: "90",
+  doorstepMinutes: "90",
+  priceLockDays: "7",
+  doorstepFee: "299",
+  requestValidDays: "3",
+  ctaPrimaryLabel: "Check price",
+  ctaPrimaryHref: "/price",
+  ctaSecondaryLabel: "Book repair",
+  ctaSecondaryHref: "/repair",
 };
 
 export default function AdminPage() {
@@ -59,6 +126,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<
     | "repairs"
     | "sells"
+    | "contacts"
+    | "reviews"
+    | "content"
     | "whatsapp"
     | "settings"
     | "scenarios"
@@ -66,16 +136,13 @@ export default function AdminPage() {
   >("repairs");
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [sells, setSells] = useState<Sell[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [content, setContent] = useState<ContentItem[]>([]);
   const [whatsapp, setWhatsapp] = useState<WaLog[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [storeForm, setStoreForm] = useState<StoreForm>({
-    name: "",
-    address: "",
-    phone: "",
-    hours: "",
-    mapsUrl: "",
-  });
+  const [storeForm, setStoreForm] = useState<StoreForm>(emptyStore);
   const [selected, setSelected] = useState<Repair | null>(null);
   const [status, setStatus] = useState("RECEIVED");
   const [finalAmount, setFinalAmount] = useState("");
@@ -100,16 +167,36 @@ export default function AdminPage() {
       const data = await res.json();
       setRepairs(data.repairs);
       setSells(data.sells);
+      setContacts(data.contacts || []);
+      setReviews(data.reviews || []);
+      setContent(data.content || []);
       setWhatsapp(data.whatsapp);
       setScenarios(data.scenarios || []);
       setGallery(data.gallery || []);
       if (data.store) {
         setStoreForm({
-          name: data.store.name || "",
+          ...emptyStore,
+          name: data.store.name || "PhoneRepairO",
           address: data.store.address || "",
           phone: data.store.phone || "",
           hours: data.store.hours || "",
           mapsUrl: data.store.mapsUrl || "",
+          heroHeadline: data.store.heroHeadline || "",
+          heroSubtext: data.store.heroSubtext || "",
+          heroBadge: data.store.heroBadge || "",
+          seoTitle: data.store.seoTitle || "",
+          seoDescription: data.store.seoDescription || "",
+          trustIntro: data.store.trustIntro || "",
+          privacyBlurb: data.store.privacyBlurb || "",
+          warrantyDays: String(data.store.warrantyDays ?? 90),
+          doorstepMinutes: String(data.store.doorstepMinutes ?? 90),
+          priceLockDays: String(data.store.priceLockDays ?? 7),
+          doorstepFee: String(data.store.doorstepFee ?? 299),
+          requestValidDays: String(data.store.requestValidDays ?? 3),
+          ctaPrimaryLabel: data.store.ctaPrimaryLabel || "Check price",
+          ctaPrimaryHref: data.store.ctaPrimaryHref || "/price",
+          ctaSecondaryLabel: data.store.ctaSecondaryLabel || "Book repair",
+          ctaSecondaryHref: data.store.ctaSecondaryHref || "/repair",
         });
       }
       setAuthed(true);
@@ -199,12 +286,19 @@ export default function AdminPage() {
           "Content-Type": "application/json",
           "x-admin-password": password,
         },
-        body: JSON.stringify(storeForm),
+        body: JSON.stringify({
+          ...storeForm,
+          warrantyDays: Number(storeForm.warrantyDays),
+          doorstepMinutes: Number(storeForm.doorstepMinutes),
+          priceLockDays: Number(storeForm.priceLockDays),
+          doorstepFee: Number(storeForm.doorstepFee),
+          requestValidDays: Number(storeForm.requestValidDays),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setStoreForm(data.store);
-      alert("Store details saved. They now appear across the website.");
+      alert("Site settings saved. They now appear across the website.");
+      await load(password);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Could not save");
     } finally {
@@ -280,10 +374,11 @@ export default function AdminPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">
-              FixSure admin
+              PhoneRepairO admin
             </h1>
             <p className="mt-1 text-sm text-ink-soft/70">
-              {repairs.length} repairs · {sells.length} sell inquiries
+              {repairs.length} repairs · {sells.length} sell ·{" "}
+              {contacts.length} contacts · {reviews.length} reviews
             </p>
           </div>
           <button
@@ -300,10 +395,13 @@ export default function AdminPage() {
             [
               ["repairs", "Repairs"],
               ["sells", "Sell inquiries"],
+              ["contacts", "Contact leads"],
+              ["reviews", "Reviews"],
+              ["content", "Website content"],
               ["scenarios", "Troubleshoot"],
               ["gallery", "Gallery"],
               ["whatsapp", "WhatsApp log"],
-              ["settings", "Store settings"],
+              ["settings", "Site settings"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -348,6 +446,9 @@ export default function AdminPage() {
                     </td>
                     <td className="px-4 py-3">
                       {r.brand} {r.model}
+                      <div className="text-xs text-ink-soft/60">
+                        {r.deviceType || "phone"} · store visit
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-mint/50 px-2 py-1 text-xs font-semibold text-teal-deep">
@@ -443,6 +544,138 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === "contacts" && (
+          <div className="mt-6 space-y-3">
+            {contacts.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-xl border border-[var(--line)] bg-white p-4 text-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{c.name}</p>
+                    <p className="text-xs text-ink-soft/60">
+                      {c.phoneNumber || "—"} · {c.email || "—"} ·{" "}
+                      {new Date(c.createdAt).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <select
+                    className="field !w-auto !py-1.5 text-xs"
+                    value={c.status}
+                    onChange={async (e) => {
+                      const res = await fetch("/api/admin/contact", {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "x-admin-password": password,
+                        },
+                        body: JSON.stringify({
+                          id: c.id,
+                          status: e.target.value,
+                        }),
+                      });
+                      if (!res.ok) alert("Could not update");
+                      else await load(password);
+                    }}
+                  >
+                    <option value="NEW">NEW</option>
+                    <option value="REPLIED">REPLIED</option>
+                    <option value="CLOSED">CLOSED</option>
+                  </select>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-ink-soft">
+                  {c.message}
+                </p>
+              </div>
+            ))}
+            {contacts.length === 0 && (
+              <p className="text-sm text-ink-soft/60">No contact messages yet.</p>
+            )}
+          </div>
+        )}
+
+        {tab === "reviews" && (
+          <div className="mt-6 space-y-3">
+            {reviews.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-xl border border-[var(--line)] bg-white p-4 text-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">
+                      {r.name}{" "}
+                      <span className="font-normal text-amber">
+                        {"★".repeat(r.rating)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-ink-soft/60">
+                      {r.device || "—"} · {r.phoneNumber || "—"} · {r.status} ·{" "}
+                      {new Date(r.createdAt).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className="field !w-auto !py-1.5 text-xs"
+                      value={r.status}
+                      onChange={async (e) => {
+                        const res = await fetch("/api/admin/review", {
+                          method: "PATCH",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "x-admin-password": password,
+                          },
+                          body: JSON.stringify({
+                            id: r.id,
+                            status: e.target.value,
+                          }),
+                        });
+                        if (!res.ok) alert("Could not update");
+                        else await load(password);
+                      }}
+                    >
+                      <option value="PENDING">PENDING</option>
+                      <option value="APPROVED">APPROVED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-amber"
+                      onClick={async () => {
+                        if (!confirm("Delete review?")) return;
+                        await fetch(
+                          `/api/admin/review?id=${encodeURIComponent(r.id)}`,
+                          {
+                            method: "DELETE",
+                            headers: { "x-admin-password": password },
+                          }
+                        );
+                        await load(password);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-ink-soft">{r.body}</p>
+              </div>
+            ))}
+            {reviews.length === 0 && (
+              <p className="text-sm text-ink-soft/60">
+                No customer reviews yet. They submit at /reviews.
+              </p>
+            )}
+          </div>
+        )}
+
+        {tab === "content" && (
+          <ContentManager
+            password={password}
+            items={content}
+            onChanged={() => load(password)}
+          />
+        )}
+
         {tab === "scenarios" && (
           <ScenarioManager
             password={password}
@@ -487,22 +720,22 @@ export default function AdminPage() {
         )}
 
         {tab === "settings" && (
-          <div className="mt-6 max-w-xl space-y-6">
+          <div className="mt-6 max-w-2xl space-y-6">
             <form
               onSubmit={saveStore}
               className="space-y-4 rounded-2xl border border-[var(--line)] bg-white p-6"
             >
               <div>
                 <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
-                  Store contact details
+                  Brand &amp; store
                 </h2>
                 <p className="mt-1 text-sm text-ink-soft/70">
-                  These show on the homepage, header, footer, repair/sell pages,
-                  and in WhatsApp messages.
+                  Website name (e.g. PhoneRepairO), address, and contact —
+                  shown in header, footer, and messages.
                 </p>
               </div>
               <div>
-                <label className="field-label">Store name</label>
+                <label className="field-label">Website / brand name *</label>
                 <input
                   className="field"
                   value={storeForm.name}
@@ -524,14 +757,13 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="field-label">Phone / WhatsApp number *</label>
+                <label className="field-label">Phone / WhatsApp *</label>
                 <input
                   className="field"
                   value={storeForm.phone}
                   onChange={(e) =>
                     setStoreForm({ ...storeForm, phone: e.target.value })
                   }
-                  placeholder="+91 98765 43210"
                   required
                 />
               </div>
@@ -553,15 +785,197 @@ export default function AdminPage() {
                   onChange={(e) =>
                     setStoreForm({ ...storeForm, mapsUrl: e.target.value })
                   }
-                  placeholder="https://maps.google.com/..."
                 />
               </div>
+
+              <hr className="border-[var(--line)]" />
+              <h3 className="font-semibold">Homepage hero</h3>
+              <div>
+                <label className="field-label">Headline</label>
+                <textarea
+                  className="field min-h-[60px]"
+                  value={storeForm.heroHeadline}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, heroHeadline: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="field-label">Supporting text</label>
+                <textarea
+                  className="field min-h-[80px]"
+                  value={storeForm.heroSubtext}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, heroSubtext: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="field-label">Badge line</label>
+                <input
+                  className="field"
+                  value={storeForm.heroBadge}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, heroBadge: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="field-label">Primary CTA label</label>
+                  <input
+                    className="field"
+                    value={storeForm.ctaPrimaryLabel}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        ctaPrimaryLabel: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Primary CTA link</label>
+                  <input
+                    className="field"
+                    value={storeForm.ctaPrimaryHref}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        ctaPrimaryHref: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Secondary CTA label</label>
+                  <input
+                    className="field"
+                    value={storeForm.ctaSecondaryLabel}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        ctaSecondaryLabel: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Secondary CTA link</label>
+                  <input
+                    className="field"
+                    value={storeForm.ctaSecondaryHref}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        ctaSecondaryHref: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <hr className="border-[var(--line)]" />
+              <h3 className="font-semibold">SEO &amp; copy</h3>
+              <div>
+                <label className="field-label">Browser tab title</label>
+                <input
+                  className="field"
+                  value={storeForm.seoTitle}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, seoTitle: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="field-label">SEO description</label>
+                <textarea
+                  className="field min-h-[60px]"
+                  value={storeForm.seoDescription}
+                  onChange={(e) =>
+                    setStoreForm({
+                      ...storeForm,
+                      seoDescription: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="field-label">Trust section intro</label>
+                <textarea
+                  className="field min-h-[60px]"
+                  value={storeForm.trustIntro}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, trustIntro: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="field-label">Privacy blurb</label>
+                <textarea
+                  className="field min-h-[60px]"
+                  value={storeForm.privacyBlurb}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, privacyBlurb: e.target.value })
+                  }
+                />
+              </div>
+
+              <hr className="border-[var(--line)]" />
+              <h3 className="font-semibold">Pricing &amp; visit rules</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="field-label">Warranty days</label>
+                  <input
+                    className="field"
+                    type="number"
+                    value={storeForm.warrantyDays}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        warrantyDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">
+                    Request valid days (bring phone by)
+                  </label>
+                  <input
+                    className="field"
+                    type="number"
+                    value={storeForm.requestValidDays}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        requestValidDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Price lock (days)</label>
+                  <input
+                    className="field"
+                    type="number"
+                    value={storeForm.priceLockDays}
+                    onChange={(e) =>
+                      setStoreForm({
+                        ...storeForm,
+                        priceLockDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="btn-primary"
                 disabled={savingStore}
               >
-                {savingStore ? "Saving…" : "Save store details"}
+                {savingStore ? "Saving…" : "Save site settings"}
               </button>
             </form>
 
@@ -635,7 +1049,11 @@ export default function AdminPage() {
               Update {selected.trackingId}
             </h2>
             <p className="mt-1 text-sm text-ink-soft/70">
-              {selected.customerName} · {selected.brand} {selected.model}
+              {selected.customerName} · {selected.brand} {selected.model} ·{" "}
+              {selected.deviceType || "phone"}
+            </p>
+            <p className="mt-2 text-xs font-semibold text-teal">
+              Store visit
             </p>
             <p className="mt-3 text-sm text-ink-soft/80">
               {selected.issueDescription}

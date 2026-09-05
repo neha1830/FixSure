@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getApprovedReviews } from "@/lib/public-data";
 
 export async function GET() {
-  const reviews = await prisma.customerReview.findMany({
-    where: { status: "APPROVED" },
-    orderBy: { createdAt: "desc" },
-    take: 40,
-  });
+  const reviews = await getApprovedReviews(40);
   return NextResponse.json({ reviews });
 }
 

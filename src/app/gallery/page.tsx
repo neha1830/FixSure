@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import { getStoreSettings } from "@/lib/store";
-
-export const dynamic = "force-dynamic";
+import { getPublicGallery } from "@/lib/public-data";
 
 export async function generateMetadata() {
   const store = await getStoreSettings();
@@ -13,10 +11,7 @@ export async function generateMetadata() {
 }
 
 export default async function GalleryPage() {
-  const items = await prisma.galleryItem.findMany({
-    where: { published: true, consentGiven: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
+  const items = await getPublicGallery();
 
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
@@ -55,6 +50,7 @@ export default async function GalleryPage() {
                       src={item.beforeUrl}
                       alt={`Before: ${item.device}`}
                       className="aspect-[4/3] h-full w-full object-cover"
+                      loading="lazy"
                     />
                     <figcaption className="absolute left-4 top-4 rounded-full bg-ink/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                       Before
@@ -66,6 +62,7 @@ export default async function GalleryPage() {
                       src={item.afterUrl}
                       alt={`After: ${item.device}`}
                       className="aspect-[4/3] h-full w-full object-cover"
+                      loading="lazy"
                     />
                     <figcaption className="absolute left-4 top-4 rounded-full bg-teal px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                       After

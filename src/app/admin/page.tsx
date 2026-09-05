@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { REPAIR_STATUSES, STATUS_LABELS, RepairStatus, WHATSAPP_NOTIFY_STATUSES } from "@/lib/store";
+import { REPAIR_STATUSES, STATUS_LABELS, RepairStatus, WHATSAPP_NOTIFY_STATUSES } from "@/lib/store-constants";
 import { ScenarioManager, Scenario } from "@/components/ScenarioManager";
 import { GalleryManager, GalleryItem } from "@/components/GalleryManager";
 import { ContentManager, ContentItem } from "@/components/ContentManager";

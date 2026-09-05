@@ -2,9 +2,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// LOCAL DEVELOPMENT ONLY — never point this at Neon/prod
+// PRODUCTION / QA / CI ONLY — Neon Postgres (never use for local day-to-day)
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

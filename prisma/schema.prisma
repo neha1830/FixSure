@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model RepairRequest {
+  id              String   @id @default(cuid())
+  trackingId      String   @unique
+  customerName    String
+  phoneNumber     String
+  email           String?
+  brand           String
+  model           String
+  storage         String?
+  batteryHealth   String?
+  color           String?
+  imei            String?
+  issueCategory   String
+  issueDescription String
+  troubleshootTried Boolean @default(false)
+  estimatedCharge Float?
+  estimateValidUntil DateTime?
+  finalAmount     Float?
+  status          String   @default("REQUESTED")
+  adminNotes      String?
+  privacyAck      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  statusLogs      StatusLog[]
+}
+
+model StatusLog {
+  id              String   @id @default(cuid())
+  repairRequestId String
+  status          String
+  message         String
+  amount          Float?
+  whatsappSent    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  repairRequest   RepairRequest @relation(fields: [repairRequestId], references: [id], onDelete: Cascade)
+}
+
+model SellInquiry {
+  id              String   @id @default(cuid())
+  inquiryId       String   @unique
+  customerName    String
+  phoneNumber     String
+  email           String?
+  brand           String
+  model           String
+  storage         String
+  condition       String
+  batteryHealth   String?
+  hasBox          Boolean  @default(false)
+  hasCharger      Boolean  @default(false)
+  screenCondition String?
+  bodyCondition   String?
+  notes           String?
+  estimatedPrice  Float
+  estimateValidUntil DateTime?
+  status          String   @default("ESTIMATED")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model GalleryItem {
+  id            String   @id @default(cuid())
+  title         String
+  device        String
+  repairType    String?
+  beforeUrl     String
+  afterUrl      String
+  caption       String?
+  consentGiven  Boolean  @default(false)
+  published     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WhatsAppLog {
+  id          String   @id @default(cuid())
+  phoneNumber String
+  message     String
+  relatedType String?
+  relatedId   String?
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model StoreSettings {
+  id        String   @id @default("default")
+  name      String
+  address   String
+  phone     String
+  hours     String
+  mapsUrl   String?
+  updatedAt DateTime @updatedAt
+}
+
+model AdminSettings {
+  id           String   @id @default("default")
+  passwordHash String
+  updatedAt    DateTime @updatedAt
+}
+
+model TroubleshootScenario {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  steps       TroubleshootStepItem[]
+}
+
+model TroubleshootStepItem {
+  id          String   @id @default(cuid())
+  scenarioId  String
+  title       String
+  detail      String
+  sortOrder   Int      @default(0)
+  scenario    TroubleshootScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}

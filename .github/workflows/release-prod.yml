@@ -1,0 +1,67 @@
+name: Production release
+
+# Prod ONLY via GitHub Release (preferred) or manual confirm=DEPLOY
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type DEPLOY to confirm manual prod run"
+        required: true
+
+jobs:
+  guard:
+    name: Release guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release or explicit confirm
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.confirm }}" != "DEPLOY" ]; then
+              echo "Manual prod requires confirm=DEPLOY"
+              exit 1
+            fi
+          fi
+          echo "Prod gate OK: ${{ github.event.release.tag_name || 'manual' }}"
+
+  quality:
+    name: CI checks
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  update-prod-branch:
+    name: Point prod branch at release tag
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward prod to release tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin tag "$TAG" --force
+          git checkout -B prod "refs/tags/$TAG"
+          git push origin prod --force-with-lease
+          echo "prod is now at $TAG"
+
+  deploy-prod:
+    name: Deploy production (placeholder)
+    runs-on: ubuntu-latest
+    needs: [quality, update-prod-branch]
+    if: always() && needs.quality.result == 'success' && (needs.update-prod-branch.result == 'success' || needs.update-prod-branch.result == 'skipped')
+    environment: production
+    steps:
+      - name: Production gate passed
+        run: |
+          echo "CI passed. Wire Vercel production deploy here."
+          echo "Tag: ${{ github.event.release.tag_name || 'manual' }}"

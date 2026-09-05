@@ -32,6 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# sqlite
+prisma/*.db
+prisma/*.db-journal
+*.db
+*.db-journal
+
+# uploaded gallery images
+/public/uploads
+
 
 # vercel
 .vercel

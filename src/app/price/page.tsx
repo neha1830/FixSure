@@ -55,15 +55,6 @@ function PriceForm() {
       .catch(() => {});
   }, [params]);
 
-  useEffect(() => {
-    const d = params.get("deviceType");
-    const b = params.get("brand");
-    const i = params.get("issueCategory");
-    if (d) setDeviceType(d);
-    if (b) setBrand(b);
-    if (i) setIssueCategory(i);
-  }, [params]);
-
   const bookHref = useMemo(() => {
     const q = new URLSearchParams({
       deviceType,

@@ -8,6 +8,10 @@ See [docs/BRANCHING.md](docs/BRANCHING.md):
 
 `feature/*` → **PR** → `develop` → **PR** → `qa` → **GitHub Release** → `prod`
 
+## Deploy (Vercel + Neon + GoDaddy)
+
+See [docs/DEPLOY.md](docs/DEPLOY.md).
+
 CI runs ESLint, TypeScript, and production build on every PR. SonarCloud runs when `SONAR_TOKEN` is set.
 
 ## Quick start

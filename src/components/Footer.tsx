@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getStoreSettings } from "@/lib/store";
+import { SiteLogo } from "@/components/SiteLogo";
 
 export async function Footer() {
   const store = await getStoreSettings();
@@ -8,12 +9,12 @@ export async function Footer() {
     <footer className="mt-auto border-t border-[var(--line)] bg-ink text-mist">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3">
         <div>
-          <p className="brand-mark text-3xl font-bold text-white">
-            Fix<span className="text-mint">Sure</span>
-          </p>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-mint/80">
-            Transparent phone repair and fair buyback — built so you always
-            know what happens next.
+          <Link href="/" aria-label={store.name} className="inline-flex">
+            <SiteLogo size="lg" onDark />
+          </Link>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-mint/80">
+            Transparent device repair, fair buyback, and live tracking so you
+            always know what happens next.
           </p>
         </div>
         <div>
@@ -29,8 +30,14 @@ export async function Footer() {
             Quick links
           </p>
           <div className="mt-3 flex flex-col gap-2 text-sm">
+            <Link href="/price" className="hover:text-mint">
+              Check price
+            </Link>
             <Link href="/troubleshoot" className="hover:text-mint">
               Free troubleshooting
+            </Link>
+            <Link href="/repair" className="hover:text-mint">
+              Book repair
             </Link>
             <Link href="/gallery" className="hover:text-mint">
               Before &amp; after gallery
@@ -43,6 +50,12 @@ export async function Footer() {
             </Link>
             <Link href="/sell" className="hover:text-mint">
               Sell your phone
+            </Link>
+            <Link href="/reviews" className="hover:text-mint">
+              Reviews
+            </Link>
+            <Link href="/contact" className="hover:text-mint">
+              Contact
             </Link>
           </div>
         </div>

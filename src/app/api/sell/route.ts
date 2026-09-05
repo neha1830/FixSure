@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import {
   estimateSellPrice,
   getEstimateValidUntil,
-  PRICE_LOCK_DAYS,
 } from "@/lib/pricing";
 import { getStoreSettings } from "@/lib/store";
 
@@ -51,7 +50,11 @@ export async function POST(req: Request) {
       hasBox,
       hasCharger,
     });
-    const estimateValidUntil = getEstimateValidUntil();
+    const store = await getStoreSettings();
+    const estimateValidUntil = getEstimateValidUntil(
+      new Date(),
+      store.priceLockDays
+    );
     const iid = `SL-${inquiryId()}`;
 
     await prisma.sellInquiry.create({
@@ -75,16 +78,13 @@ export async function POST(req: Request) {
       },
     });
 
-    const store = await getStoreSettings();
-
     return NextResponse.json({
       inquiryId: iid,
       estimatedPrice,
       estimateValidUntil: estimateValidUntil.toISOString(),
-      priceLockDays: PRICE_LOCK_DAYS,
+      priceLockDays: store.priceLockDays,
       store,
-      disclaimer:
-        "This is an online estimate locked for 7 days. Final offer is confirmed after in-store inspection.",
+      disclaimer: `This is an online estimate locked for ${store.priceLockDays} days. Final offer is confirmed after in-store inspection.`,
     });
   } catch (err) {
     console.error(err);

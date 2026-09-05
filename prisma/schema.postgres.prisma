@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// PRODUCTION / QA / CI ONLY — Neon Postgres (never use for local day-to-day)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model RepairRequest {
+  id              String   @id @default(cuid())
+  trackingId      String   @unique
+  customerName    String
+  phoneNumber     String
+  email           String?
+  deviceType      String   @default("phone")
+  serviceMode     String   @default("STORE")
+  serviceAddress  String?
+  preferredDate   String?
+  preferredTime   String?
+  brand           String
+  model           String
+  storage         String?
+  batteryHealth   String?
+  color           String?
+  imei            String?
+  issueCategory   String
+  issueDescription String
+  troubleshootTried Boolean @default(false)
+  estimatedCharge Float?
+  estimateValidUntil DateTime?
+  finalAmount     Float?
+  status          String   @default("REQUESTED")
+  adminNotes      String?
+  privacyAck      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  statusLogs      StatusLog[]
+}
+
+model StatusLog {
+  id              String   @id @default(cuid())
+  repairRequestId String
+  status          String
+  message         String
+  amount          Float?
+  whatsappSent    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  repairRequest   RepairRequest @relation(fields: [repairRequestId], references: [id], onDelete: Cascade)
+}
+
+model SellInquiry {
+  id              String   @id @default(cuid())
+  inquiryId       String   @unique
+  customerName    String
+  phoneNumber     String
+  email           String?
+  brand           String
+  model           String
+  storage         String
+  condition       String
+  batteryHealth   String?
+  hasBox          Boolean  @default(false)
+  hasCharger      Boolean  @default(false)
+  screenCondition String?
+  bodyCondition   String?
+  notes           String?
+  estimatedPrice  Float
+  estimateValidUntil DateTime?
+  status          String   @default("ESTIMATED")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model GalleryItem {
+  id            String   @id @default(cuid())
+  title         String
+  device        String
+  repairType    String?
+  beforeUrl     String
+  afterUrl      String
+  caption       String?
+  consentGiven  Boolean  @default(false)
+  published     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WhatsAppLog {
+  id          String   @id @default(cuid())
+  phoneNumber String
+  message     String
+  relatedType String?
+  relatedId   String?
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model StoreSettings {
+  id               String   @id @default("default")
+  name             String
+  address          String
+  phone            String
+  hours            String
+  mapsUrl          String?
+  heroHeadline     String   @default("Trusted device repair — with every step visible.")
+  heroSubtext      String   @default("Check price in seconds, book a store visit, track live updates, or sell with a fair estimate.")
+  heroBadge        String   @default("Store visits · 90-day warranty · live track")
+  seoTitle         String   @default("PhoneRepairO — Trusted device repair & buyback")
+  seoDescription   String   @default("Check price, book a repair, track every stage, or get a fair sell estimate.")
+  trustIntro       String   @default("PhoneRepairO is built so customers never wonder what happens behind the counter.")
+  privacyBlurb     String   @default("We never access photos without permission. No sign-out or factory reset required.")
+  warrantyDays     Int      @default(90)
+  doorstepMinutes  Int      @default(90)
+  priceLockDays    Int      @default(7)
+  doorstepFee      Float    @default(299)
+  requestValidDays Int      @default(3)
+  ctaPrimaryLabel  String   @default("Check price")
+  ctaPrimaryHref   String   @default("/price")
+  ctaSecondaryLabel String  @default("Book repair")
+  ctaSecondaryHref String   @default("/repair")
+  updatedAt        DateTime @updatedAt
+}
+
+model ContentItem {
+  id        String   @id @default(cuid())
+  type      String
+  key       String?
+  title     String
+  subtitle  String?
+  body      String?
+  meta      String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminSettings {
+  id           String   @id @default("default")
+  passwordHash String
+  updatedAt    DateTime @updatedAt
+}
+
+model TroubleshootScenario {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  steps       TroubleshootStepItem[]
+}
+
+model TroubleshootStepItem {
+  id          String   @id @default(cuid())
+  scenarioId  String
+  title       String
+  detail      String
+  sortOrder   Int      @default(0)
+  scenario    TroubleshootScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}
+
+model ContactInquiry {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phoneNumber String?
+  message     String
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomerReview {
+  id          String   @id @default(cuid())
+  name        String
+  device      String?
+  rating      Int      @default(5)
+  body        String
+  phoneNumber String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

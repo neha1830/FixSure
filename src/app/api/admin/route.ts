@@ -35,6 +35,22 @@ export async function GET(req: NextRequest) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 
+  const contacts = await prisma.contactInquiry.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const reviews = await prisma.customerReview.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  const { listContent, ensureContentSeeded } = await import(
+    "@/lib/site-content"
+  );
+  await ensureContentSeeded();
+  const content = await listContent();
+
   return NextResponse.json({
     repairs,
     sells,
@@ -42,6 +58,9 @@ export async function GET(req: NextRequest) {
     store,
     scenarios,
     gallery,
+    contacts,
+    reviews,
+    content,
   });
 }
 

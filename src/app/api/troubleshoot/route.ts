@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  estimateRepairCharge,
-  getEstimateValidUntil,
-  PRICE_LOCK_DAYS,
-} from "@/lib/pricing";
+import { estimateRepairCharge, getEstimateValidUntil } from "@/lib/pricing";
 import { getTroubleshootSteps } from "@/lib/troubleshooting";
 import { getStoreSettings } from "@/lib/store";
 
@@ -26,15 +22,21 @@ export async function POST(req: Request) {
       issueDescription: issueDescription || "",
     });
 
-    const estimatedCharge = estimateRepairCharge({ brand, issueCategory });
-    const estimateValidUntil = getEstimateValidUntil();
     const store = await getStoreSettings();
+    const estimatedCharge = await estimateRepairCharge({
+      brand,
+      issueCategory,
+    });
+    const estimateValidUntil = getEstimateValidUntil(
+      new Date(),
+      store.priceLockDays
+    );
 
     return NextResponse.json({
       steps,
       estimatedCharge,
       estimateValidUntil: estimateValidUntil.toISOString(),
-      priceLockDays: PRICE_LOCK_DAYS,
+      priceLockDays: store.priceLockDays,
       store,
       message:
         "Try these steps first. If the issue remains, submit a repair request and visit our store.",

@@ -1,63 +1,47 @@
-# Go-live: Vercel + Neon + GoDaddy
+# Database separation
 
-## 1. Neon Postgres (database)
+| Environment | Database | Where `DATABASE_URL` lives |
+|-------------|----------|------------------------------|
+| **Local** | SQLite `prisma/dev.db` (or `file:./dev.db`) | `.env` / `.env.local` only |
+| **QA / Preview** | Neon branch or DB named `fixsure-qa` | Vercel **Preview** env vars |
+| **Production** | Neon branch or DB named `fixsure-prod` | Vercel **Production** env vars only |
 
-1. Sign up: https://console.neon.tech  
-2. Create project **FixSure**  
-3. Copy the connection string (use the **pooled** URL if shown):  
-   `postgresql://USER:PASSWORD@HOST/neondb?sslmode=require`  
-4. In Neon SQL Editor (optional), nothing else needed — Prisma will create tables.
+**Never** put the production Neon URL in `.env` on your laptop.  
+**Never** point local `npm run dev` at Neon.
 
-Local/dev can keep using a Neon DB too, or a free Neon “dev” branch.
+## Local (SQLite)
 
-## 2. Vercel (hosting)
-
-1. Sign up with GitHub: https://vercel.com  
-2. **Add New Project** → import `neha1830/FixSure`  
-3. Set **Production Branch** to `prod`  
-4. Add **Preview** deployments for `qa` and `develop` (Vercel does this by default for all branches)  
-5. Environment variables (Production + Preview):
-
-| Name | Value |
-|------|--------|
-| `DATABASE_URL` | Neon Postgres URL |
-| `ADMIN_PASSWORD` | strong password |
-| `WHATSAPP_MODE` | `mock` |
-| `STORE_NAME` | your shop name |
-| `STORE_ADDRESS` | address |
-| `STORE_PHONE` | phone |
-| `STORE_HOURS` | hours |
-
-6. Deploy. Note the URL: `https://fixsure-….vercel.app`
-
-After first deploy, run once (Vercel CLI or local with prod `DATABASE_URL`):
-
-```bash
-DATABASE_URL="postgresql://..." npx prisma db push
+```env
+DATABASE_URL="file:./dev.db"
 ```
 
-Or add a one-time “Build Command” that includes `prisma db push` only for first boot (prefer running `db push` manually once).
+```bash
+npm run db:generate   # uses prisma/schema.prisma (sqlite)
+npm run db:push
+npm run dev
+```
 
-## 3. GoDaddy domain
+## Production / QA (Neon Postgres)
 
-1. Vercel → Project → **Settings → Domains** → add `yourdomain.com` and `www.yourdomain.com`  
-2. GoDaddy → **DNS** for the domain:
+Schemas: `prisma/schema.postgres.prisma`  
+Vercel build uses this automatically via `vercel.json`.
 
-| Type | Name | Value |
-|------|------|--------|
-| A | `@` | `76.76.21.21` |
-| CNAME | `www` | `cname.vercel-dns.com` |
+Create **two** Neon databases/branches (do not share):
 
-(Use exact values Vercel shows if different.)
+1. `fixsure-prod` → Vercel Production `DATABASE_URL`  
+2. `fixsure-qa` → Vercel Preview `DATABASE_URL`  
 
-3. Wait for DNS (5–60 min). HTTPS is automatic on Vercel.
+Push schema once per database:
 
-## 4. Branch → environment mapping
+```bash
+DATABASE_URL="postgresql://…qa…" npm run db:push:prod
+DATABASE_URL="postgresql://…prod…" npm run db:push:prod
+```
 
-| Git branch | Vercel |
-|------------|--------|
-| `develop` | Preview |
-| `qa` | Preview (treat as staging URL / alias) |
-| `prod` (via Release) | Production + custom domain |
+## GoDaddy / Vercel
 
-Optional: in Vercel Domains, assign `qa.yourdomain.com` to the `qa` branch.
+See earlier sections in this file for domain DNS. After Vercel import:
+
+1. Production env → prod Neon URL  
+2. Preview env → qa Neon URL  
+3. Production branch = `prod`

@@ -387,7 +387,8 @@ export default async function HomePage() {
                     body: t.body,
                     rating: t.rating,
                   }))
-                : testimonials.map((t) => ({
+                : // CMS seed testimonials only until a real review is approved
+                  testimonials.map((t) => ({
                     id: t.id,
                     title: t.title,
                     subtitle: t.subtitle,

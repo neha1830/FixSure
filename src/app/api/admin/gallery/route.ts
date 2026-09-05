@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireAdmin, unauthorized } from "@/lib/auth";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 async function saveUpload(file: File | null, prefix: string) {
   if (!file || file.size === 0) return null;
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    revalidatePublicSite("gallery");
     return NextResponse.json({ item });
   } catch (err) {
     console.error(err);
@@ -117,6 +119,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    revalidatePublicSite("gallery");
     return NextResponse.json({ item });
   } catch {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
@@ -130,5 +133,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
   }
   await prisma.galleryItem.delete({ where: { id } });
+  revalidatePublicSite("gallery");
   return NextResponse.json({ ok: true });
 }

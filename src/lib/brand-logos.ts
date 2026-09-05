@@ -1,4 +1,4 @@
-import { parseMeta } from "@/lib/site-content";
+import { parseMeta } from "@/lib/content-meta";
 
 const BRAND_FILES: Record<string, string> = {
   apple: "/brands/apple.svg",

@@ -7,7 +7,7 @@ import {
   ISSUE_CATEGORIES,
   PHONE_BRANDS,
   STORAGE_OPTIONS,
-} from "@/lib/troubleshooting";
+} from "@/lib/troubleshooting-constants";
 import { SERVICE_CATALOG } from "@/lib/catalog";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 import { WipeChecklist } from "@/components/WipeChecklist";

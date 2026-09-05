@@ -2,7 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { STATUS_LABELS, RepairStatus } from "@/lib/store";
+import { STATUS_LABELS, RepairStatus } from "@/lib/store-constants";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 
 type Log = {

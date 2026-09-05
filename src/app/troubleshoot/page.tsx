@@ -7,7 +7,7 @@ import {
   PHONE_BRANDS,
   STORAGE_OPTIONS,
   TroubleshootStep,
-} from "@/lib/troubleshooting";
+} from "@/lib/troubleshooting-constants";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 import { getEstimateValidUntil } from "@/lib/pricing";
 

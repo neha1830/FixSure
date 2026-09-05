@@ -1,5 +1,10 @@
-import { unstable_noStore as noStore } from "next/cache";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
+import { CACHE_TAGS } from "./cache-tags";
+import { parseMeta } from "./content-meta";
+
+export { parseMeta };
 
 export const CONTENT_TYPES = [
   "device",
@@ -25,15 +30,6 @@ export type ContentItemDto = {
   sortOrder: number;
   active: boolean;
 };
-
-export function parseMeta(meta: string | null | undefined): Record<string, unknown> {
-  if (!meta) return {};
-  try {
-    return JSON.parse(meta) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
 
 type SeedItem = {
   type: ContentType;
@@ -112,85 +108,25 @@ const SEED: SeedItem[] = [
 
 let seedPromise: Promise<void> | null = null;
 
+/** Seed empty CMS once per process. Soft migrations run only when empty. */
 export async function ensureContentSeeded(): Promise<void> {
   if (!seedPromise) {
     seedPromise = (async () => {
       const count = await prisma.contentItem.count();
-      if (count === 0) {
-        await prisma.contentItem.createMany({
-          data: SEED.map((s) => ({
-            type: s.type,
-            key: s.key || null,
-            title: s.title,
-            subtitle: s.subtitle || null,
-            body: s.body || null,
-            meta: s.meta ? JSON.stringify(s.meta) : null,
-            sortOrder: s.sortOrder,
-            active: true,
-          })),
-        });
-      }
+      if (count > 0) return;
 
-      const store = await prisma.storeSettings.findUnique({
-        where: { id: "default" },
+      await prisma.contentItem.createMany({
+        data: SEED.map((s) => ({
+          type: s.type,
+          key: s.key || null,
+          title: s.title,
+          subtitle: s.subtitle || null,
+          body: s.body || null,
+          meta: s.meta ? JSON.stringify(s.meta) : null,
+          sortOrder: s.sortOrder,
+          active: true,
+        })),
       });
-      if (store) {
-        const patch: Record<string, string | number> = {};
-        if (store.name === "FixSure" || !store.name) patch.name = "PhoneRepairO";
-        if (store.heroHeadline?.toLowerCase().includes("doorstep")) {
-          patch.heroHeadline = ENV_DEFAULTS_HERO.heroHeadline;
-          patch.heroSubtext = ENV_DEFAULTS_HERO.heroSubtext;
-          patch.heroBadge = ENV_DEFAULTS_HERO.heroBadge;
-          patch.trustIntro = ENV_DEFAULTS_HERO.trustIntro;
-          patch.seoDescription = ENV_DEFAULTS_HERO.seoDescription;
-        }
-        if (Object.keys(patch).length) {
-          await prisma.storeSettings.update({
-            where: { id: "default" },
-            data: patch,
-          });
-        }
-      }
-
-      // Soft-migrate seeded marketing copy away from doorstep
-      await prisma.contentItem.updateMany({
-        where: { type: "faq", title: "Do you offer doorstep service?" },
-        data: {
-          title: "How soon should I bring my phone after requesting?",
-          body: "Please submit your device at the store within 3 days of raising a repair request. After that the request may become null and void and you’ll need to raise a fresh one.",
-        },
-      });
-      await prisma.contentItem.updateMany({
-        where: { type: "why", title: "Store or doorstep" },
-        data: {
-          title: "Planned store visits",
-          body: "Raising a request in advance helps technicians prepare parts and schedule — so your visit is smoother.",
-        },
-      });
-      await prisma.contentItem.updateMany({
-        where: { type: "process", title: "Book service" },
-        data: {
-          title: "Book a store visit",
-          body: "Submit a repair request so our technicians can plan parts and time. Bring your device within the validity window shown on your request.",
-        },
-      });
-      const doorstepFaq = await prisma.contentItem.findFirst({
-        where: {
-          type: "faq",
-          title: "Why raise a repair request online?",
-        },
-      });
-      if (!doorstepFaq) {
-        await prisma.contentItem.create({
-          data: {
-            type: "faq",
-            title: "Why raise a repair request online?",
-            body: "It helps our technicians know about upcoming work and plan parts and time accordingly — so your visit is faster and smoother.",
-            sortOrder: 2,
-            active: true,
-          },
-        });
-      }
     })().catch((err) => {
       seedPromise = null;
       throw err;
@@ -199,47 +135,38 @@ export async function ensureContentSeeded(): Promise<void> {
   await seedPromise;
 }
 
-const ENV_DEFAULTS_HERO = {
-  heroHeadline: "Trusted device repair — with every step visible.",
-  heroSubtext:
-    "Check price in seconds, book a store visit, track live updates, or sell with a fair estimate.",
-  heroBadge: "Store visits · 90-day warranty · live track",
-  trustIntro:
-    "PhoneRepairO is built so customers never wonder what happens behind the counter.",
-  seoDescription:
-    "Check price, book a repair, track every stage, or get a fair sell estimate.",
-};
-
 export async function listContent(
   type?: ContentType,
   opts?: { activeOnly?: boolean }
 ): Promise<ContentItemDto[]> {
-  noStore();
   await ensureContentSeeded();
-  const items = await prisma.contentItem.findMany({
+  return prisma.contentItem.findMany({
     where: {
       ...(type ? { type } : {}),
       ...(opts?.activeOnly ? { active: true } : {}),
     },
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
   });
-  return items;
 }
+
+const getCachedActiveContent = unstable_cache(
+  async () => listContent(undefined, { activeOnly: true }),
+  ["content-active-all"],
+  { tags: [CACHE_TAGS.content], revalidate: 300 }
+);
+
+/** All active CMS rows — one cached query for the marketing site. */
+export const getAllActiveContent = cache(() => getCachedActiveContent());
 
 export async function getContentByType(
   type: ContentType
 ): Promise<ContentItemDto[]> {
-  return listContent(type, { activeOnly: true });
+  const all = await getAllActiveContent();
+  return all.filter((item) => item.type === type);
 }
 
-export type PricingContext = {
-  baseByIssue: Record<string, number>;
-  brandMult: Record<string, number>;
-  deviceMult: Record<string, number>;
-  doorstepFee: number;
-  priceLockDays: number;
-  warrantyDays: number;
-};
+export type { PricingContext } from "./pricing";
+import type { PricingContext } from "./pricing";
 
 export async function getPricingContext(): Promise<PricingContext> {
   const { getStoreSettings } = await import("./store");

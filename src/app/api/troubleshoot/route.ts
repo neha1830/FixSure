@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { estimateRepairCharge, getEstimateValidUntil } from "@/lib/pricing";
+import { estimateRepairCharge } from "@/lib/pricing-server";
+import { getEstimateValidUntil } from "@/lib/pricing";
 import { getTroubleshootSteps } from "@/lib/troubleshooting";
 import { getStoreSettings } from "@/lib/store";
 

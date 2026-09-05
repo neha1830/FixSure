@@ -1,5 +1,11 @@
-const BASE_REPAIR: Record<string, number> = {
+import { getPricingContext, type PricingContext } from "./site-content";
+import { getStoreSettings } from "./store";
+
+/** Fallback when DB content is empty — prefer admin-managed Content. */
+const FALLBACK_BASE: Record<string, number> = {
   screen: 2499,
+  glass: 1999,
+  backglass: 2299,
   battery: 1499,
   charging: 999,
   camera: 1799,
@@ -9,25 +15,18 @@ const BASE_REPAIR: Record<string, number> = {
   other: 799,
 };
 
-const BRAND_MULTIPLIER: Record<string, number> = {
-  apple: 1.8,
-  samsung: 1.25,
-  google: 1.35,
-  oneplus: 1.15,
-  xiaomi: 0.9,
-  vivo: 0.85,
-  oppo: 0.85,
-  realme: 0.8,
-  motorola: 0.95,
-  nothing: 1.1,
-};
-
-/** Online estimates stay locked for this many days when you visit the store. */
+/** @deprecated Use getStoreSettings().priceLockDays — kept for client badge fallback */
 export const PRICE_LOCK_DAYS = 7;
 
-export function getEstimateValidUntil(from: Date = new Date()): Date {
+/** @deprecated Use getStoreSettings().doorstepFee */
+export const DOORSTEP_FEE = 299;
+
+export function getEstimateValidUntil(
+  from: Date = new Date(),
+  priceLockDays: number = PRICE_LOCK_DAYS
+): Date {
   const d = new Date(from);
-  d.setDate(d.getDate() + PRICE_LOCK_DAYS);
+  d.setDate(d.getDate() + priceLockDays);
   d.setHours(23, 59, 59, 999);
   return d;
 }
@@ -47,13 +46,46 @@ export function formatEstimateExpiry(validUntil: Date | string): string {
   });
 }
 
-export function estimateRepairCharge(opts: {
+export function estimateRepairChargeFromContext(
+  opts: {
+    brand: string;
+    issueCategory: string;
+    deviceType?: string;
+    serviceMode?: string;
+  },
+  ctx: PricingContext
+): number {
+  const base =
+    ctx.baseByIssue[opts.issueCategory.toLowerCase()] ??
+    ctx.baseByIssue.other ??
+    FALLBACK_BASE[opts.issueCategory] ??
+    FALLBACK_BASE.other;
+  const brandMult =
+    ctx.brandMult[opts.brand.toLowerCase()] ??
+    ctx.brandMult[opts.brand.toLowerCase().replace(/\s+/g, "")] ??
+    1;
+  const deviceKey = (opts.deviceType || "phone").toLowerCase();
+  const deviceMult = ctx.deviceMult[deviceKey] ?? 1;
+  let total = Math.round((base * brandMult * deviceMult) / 50) * 50;
+  if (opts.serviceMode === "DOORSTEP") {
+    total += ctx.doorstepFee;
+  }
+  return total;
+}
+
+export async function estimateRepairCharge(opts: {
   brand: string;
   issueCategory: string;
-}): number {
-  const base = BASE_REPAIR[opts.issueCategory] ?? BASE_REPAIR.other;
-  const mult = BRAND_MULTIPLIER[opts.brand.toLowerCase()] ?? 1;
-  return Math.round((base * mult) / 50) * 50;
+  deviceType?: string;
+  serviceMode?: string;
+}): Promise<number> {
+  const ctx = await getPricingContext();
+  return estimateRepairChargeFromContext(opts, ctx);
+}
+
+export async function getPriceLockDays(): Promise<number> {
+  const store = await getStoreSettings();
+  return store.priceLockDays;
 }
 
 const SELL_BASE: Record<string, number> = {

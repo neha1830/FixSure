@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import {
   estimateRepairCharge,
   getEstimateValidUntil,
-  PRICE_LOCK_DAYS,
 } from "@/lib/pricing";
 import { getStoreSettings } from "@/lib/store";
 
@@ -22,6 +21,7 @@ export async function POST(req: Request) {
       customerName,
       phoneNumber,
       email,
+      deviceType,
       brand,
       model,
       storage,
@@ -58,8 +58,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const estimatedCharge = estimateRepairCharge({ brand, issueCategory });
-    const estimateValidUntil = getEstimateValidUntil();
+    const device = deviceType || "phone";
+    const estimatedCharge = await estimateRepairCharge({
+      brand,
+      issueCategory,
+      deviceType: device,
+      serviceMode: "STORE",
+    });
+    const store = await getStoreSettings();
+    const estimateValidUntil = getEstimateValidUntil(
+      new Date(),
+      store.priceLockDays
+    );
+    const visitBy = new Date();
+    visitBy.setDate(visitBy.getDate() + store.requestValidDays);
+    visitBy.setHours(23, 59, 59, 999);
     const tid = `FS-${trackingId()}`;
 
     await prisma.repairRequest.create({
@@ -68,6 +81,11 @@ export async function POST(req: Request) {
         customerName,
         phoneNumber,
         email: email || null,
+        deviceType: device,
+        serviceMode: "STORE",
+        serviceAddress: null,
+        preferredDate: null,
+        preferredTime: null,
         brand,
         model,
         storage: storage || null,
@@ -84,7 +102,7 @@ export async function POST(req: Request) {
         statusLogs: {
           create: {
             status: "REQUESTED",
-            message: "Online repair request submitted",
+            message: `Online repair request submitted. Bring device within ${store.requestValidDays} days or request becomes void.`,
             amount: estimatedCharge,
             whatsappSent: false,
           },
@@ -92,17 +110,17 @@ export async function POST(req: Request) {
       },
     });
 
-    const store = await getStoreSettings();
-
     return NextResponse.json({
       trackingId: tid,
       phoneNumber,
       estimatedCharge,
       estimateValidUntil: estimateValidUntil.toISOString(),
-      priceLockDays: PRICE_LOCK_DAYS,
+      priceLockDays: store.priceLockDays,
+      requestValidDays: store.requestValidDays,
+      visitBy: visitBy.toISOString(),
+      serviceMode: "STORE",
       store,
-      message:
-        "Request saved. Visit the store with your phone. Track status anytime using your mobile number.",
+      message: `Request saved. Bring your phone to the store within ${store.requestValidDays} days — after that this request becomes null and void. Track anytime with your mobile number.`,
     });
   } catch (err) {
     console.error(err);
@@ -145,9 +163,55 @@ export async function GET(req: Request) {
     orderBy: { updatedAt: "desc" },
   });
 
-  const repairs = candidates.filter(
-    (r) => last10Digits(r.phoneNumber) === digits
-  );
+  const store = await getStoreSettings();
+  const cutoffMs = store.requestValidDays * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const repairs = [];
+  for (const r of candidates.filter(
+    (row) => last10Digits(row.phoneNumber) === digits
+  )) {
+    if (
+      r.status === "REQUESTED" &&
+      now - new Date(r.createdAt).getTime() > cutoffMs
+    ) {
+      const updated = await prisma.repairRequest.update({
+        where: { id: r.id },
+        data: { status: "CANCELLED" },
+        include: { statusLogs: { orderBy: { createdAt: "asc" } } },
+      });
+      await prisma.statusLog.create({
+        data: {
+          repairRequestId: r.id,
+          status: "CANCELLED",
+          message: `Request void — device not submitted within ${store.requestValidDays} days.`,
+          whatsappSent: false,
+        },
+      });
+      repairs.push({
+        ...updated,
+        voided: true,
+        statusLogs: [
+          ...updated.statusLogs,
+          {
+            id: "void",
+            status: "CANCELLED",
+            message: `Request void — device not submitted within ${store.requestValidDays} days.`,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+    } else {
+      const visitBy = new Date(r.createdAt);
+      visitBy.setDate(visitBy.getDate() + store.requestValidDays);
+      visitBy.setHours(23, 59, 59, 999);
+      repairs.push({
+        ...r,
+        visitBy: visitBy.toISOString(),
+        requestValidDays: store.requestValidDays,
+      });
+    }
+  }
 
   if (repairs.length === 0) {
     return NextResponse.json(
@@ -156,10 +220,10 @@ export async function GET(req: Request) {
     );
   }
 
-  const store = await getStoreSettings();
   return NextResponse.json({
     repairs,
     store,
-    priceLockDays: PRICE_LOCK_DAYS,
+    priceLockDays: store.priceLockDays,
+    requestValidDays: store.requestValidDays,
   });
 }

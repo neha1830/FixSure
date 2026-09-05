@@ -7,10 +7,26 @@ export type StoreInfo = {
   phone: string;
   hours: string;
   mapsUrl: string;
+  heroHeadline: string;
+  heroSubtext: string;
+  heroBadge: string;
+  seoTitle: string;
+  seoDescription: string;
+  trustIntro: string;
+  privacyBlurb: string;
+  warrantyDays: number;
+  doorstepMinutes: number;
+  priceLockDays: number;
+  doorstepFee: number;
+  requestValidDays: number;
+  ctaPrimaryLabel: string;
+  ctaPrimaryHref: string;
+  ctaSecondaryLabel: string;
+  ctaSecondaryHref: string;
 };
 
 const ENV_DEFAULTS: StoreInfo = {
-  name: process.env.STORE_NAME || "FixSure",
+  name: process.env.STORE_NAME || "PhoneRepairO",
   address:
     process.env.STORE_ADDRESS ||
     "42 MG Road, Indiranagar, Bengaluru 560038",
@@ -19,10 +35,80 @@ const ENV_DEFAULTS: StoreInfo = {
   mapsUrl:
     process.env.STORE_MAPS_URL ||
     "https://maps.google.com/?q=Indiranagar+Bengaluru",
+  heroHeadline: "Trusted device repair — with every step visible.",
+  heroSubtext:
+    "Check price in seconds, book a store visit, track live updates, or sell with a fair estimate.",
+  heroBadge: "Store visits · 90-day warranty · live track",
+  seoTitle: "PhoneRepairO — Trusted device repair & buyback",
+  seoDescription:
+    "Check price, book a repair, track every stage, or get a fair sell estimate.",
+  trustIntro:
+    "PhoneRepairO is built so customers never wonder what happens behind the counter.",
+  privacyBlurb:
+    "We never access photos without permission. No sign-out or factory reset required.",
+  warrantyDays: 90,
+  doorstepMinutes: 90,
+  priceLockDays: 7,
+  doorstepFee: 299,
+  requestValidDays: 3,
+  ctaPrimaryLabel: "Check price",
+  ctaPrimaryHref: "/price",
+  ctaSecondaryLabel: "Book repair",
+  ctaSecondaryHref: "/repair",
 };
 
 /** @deprecated Prefer getStoreSettings() so admin edits apply site-wide */
 export const store = ENV_DEFAULTS;
+
+function mapRow(row: {
+  name: string;
+  address: string;
+  phone: string;
+  hours: string;
+  mapsUrl: string | null;
+  heroHeadline?: string | null;
+  heroSubtext?: string | null;
+  heroBadge?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  trustIntro?: string | null;
+  privacyBlurb?: string | null;
+  warrantyDays?: number | null;
+  doorstepMinutes?: number | null;
+  priceLockDays?: number | null;
+  doorstepFee?: number | null;
+  requestValidDays?: number | null;
+  ctaPrimaryLabel?: string | null;
+  ctaPrimaryHref?: string | null;
+  ctaSecondaryLabel?: string | null;
+  ctaSecondaryHref?: string | null;
+}): StoreInfo {
+  return {
+    name: row.name,
+    address: row.address,
+    phone: row.phone,
+    hours: row.hours,
+    mapsUrl: row.mapsUrl || ENV_DEFAULTS.mapsUrl,
+    heroHeadline: row.heroHeadline || ENV_DEFAULTS.heroHeadline,
+    heroSubtext: row.heroSubtext || ENV_DEFAULTS.heroSubtext,
+    heroBadge: row.heroBadge || ENV_DEFAULTS.heroBadge,
+    seoTitle: row.seoTitle || ENV_DEFAULTS.seoTitle,
+    seoDescription: row.seoDescription || ENV_DEFAULTS.seoDescription,
+    trustIntro: row.trustIntro || ENV_DEFAULTS.trustIntro,
+    privacyBlurb: row.privacyBlurb || ENV_DEFAULTS.privacyBlurb,
+    warrantyDays: row.warrantyDays ?? ENV_DEFAULTS.warrantyDays,
+    doorstepMinutes: row.doorstepMinutes ?? ENV_DEFAULTS.doorstepMinutes,
+    priceLockDays: row.priceLockDays ?? ENV_DEFAULTS.priceLockDays,
+    doorstepFee: row.doorstepFee ?? ENV_DEFAULTS.doorstepFee,
+    requestValidDays:
+      row.requestValidDays ?? ENV_DEFAULTS.requestValidDays,
+    ctaPrimaryLabel: row.ctaPrimaryLabel || ENV_DEFAULTS.ctaPrimaryLabel,
+    ctaPrimaryHref: row.ctaPrimaryHref || ENV_DEFAULTS.ctaPrimaryHref,
+    ctaSecondaryLabel:
+      row.ctaSecondaryLabel || ENV_DEFAULTS.ctaSecondaryLabel,
+    ctaSecondaryHref: row.ctaSecondaryHref || ENV_DEFAULTS.ctaSecondaryHref,
+  };
+}
 
 export async function getStoreSettings(): Promise<StoreInfo> {
   noStore();
@@ -31,13 +117,7 @@ export async function getStoreSettings(): Promise<StoreInfo> {
       where: { id: "default" },
     });
     if (!row) return { ...ENV_DEFAULTS };
-    return {
-      name: row.name,
-      address: row.address,
-      phone: row.phone,
-      hours: row.hours,
-      mapsUrl: row.mapsUrl || ENV_DEFAULTS.mapsUrl,
-    };
+    return mapRow(row);
   } catch {
     return { ...ENV_DEFAULTS };
   }
@@ -53,6 +133,35 @@ export async function saveStoreSettings(
     phone: data.phone?.trim() || current.phone,
     hours: data.hours?.trim() || current.hours,
     mapsUrl: data.mapsUrl?.trim() || current.mapsUrl,
+    heroHeadline: data.heroHeadline?.trim() || current.heroHeadline,
+    heroSubtext: data.heroSubtext?.trim() || current.heroSubtext,
+    heroBadge: data.heroBadge?.trim() || current.heroBadge,
+    seoTitle: data.seoTitle?.trim() || current.seoTitle,
+    seoDescription: data.seoDescription?.trim() || current.seoDescription,
+    trustIntro: data.trustIntro?.trim() || current.trustIntro,
+    privacyBlurb: data.privacyBlurb?.trim() || current.privacyBlurb,
+    warrantyDays:
+      data.warrantyDays != null ? Number(data.warrantyDays) : current.warrantyDays,
+    doorstepMinutes:
+      data.doorstepMinutes != null
+        ? Number(data.doorstepMinutes)
+        : current.doorstepMinutes,
+    priceLockDays:
+      data.priceLockDays != null
+        ? Number(data.priceLockDays)
+        : current.priceLockDays,
+    doorstepFee:
+      data.doorstepFee != null ? Number(data.doorstepFee) : current.doorstepFee,
+    requestValidDays:
+      data.requestValidDays != null
+        ? Number(data.requestValidDays)
+        : current.requestValidDays,
+    ctaPrimaryLabel: data.ctaPrimaryLabel?.trim() || current.ctaPrimaryLabel,
+    ctaPrimaryHref: data.ctaPrimaryHref?.trim() || current.ctaPrimaryHref,
+    ctaSecondaryLabel:
+      data.ctaSecondaryLabel?.trim() || current.ctaSecondaryLabel,
+    ctaSecondaryHref:
+      data.ctaSecondaryHref?.trim() || current.ctaSecondaryHref,
   };
 
   await prisma.storeSettings.upsert({
@@ -78,22 +187,22 @@ export type RepairStatus = (typeof REPAIR_STATUSES)[number];
 
 export const STATUS_LABELS: Record<RepairStatus, string> = {
   REQUESTED: "Request received",
-  RECEIVED: "Phone submitted for repair",
-  DIAGNOSING: "Diagnosis in progress",
+  RECEIVED: "Received at store",
+  DIAGNOSING: "Diagnosing",
   IN_PROGRESS: "Repair in progress",
   READY: "Ready for pickup",
-  COMPLETED: "Repair completed",
+  COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
 
-/** Only these statuses trigger WhatsApp to real customers (Utility templates). */
+/** Statuses that send WhatsApp to the customer when selected in admin */
 export const WHATSAPP_NOTIFY_STATUSES: RepairStatus[] = [
   "RECEIVED",
   "READY",
 ];
 
-export function shouldSendRepairWhatsApp(status: string): boolean {
-  return WHATSAPP_NOTIFY_STATUSES.includes(status as RepairStatus);
+export function shouldSendRepairWhatsApp(status: RepairStatus): boolean {
+  return WHATSAPP_NOTIFY_STATUSES.includes(status);
 }
 
 export function statusWhatsAppMessage(
@@ -105,7 +214,7 @@ export function statusWhatsAppMessage(
     status: RepairStatus;
     amount?: number | null;
   },
-  storeInfo: StoreInfo = ENV_DEFAULTS
+  storeInfo: Pick<StoreInfo, "name" | "phone"> = ENV_DEFAULTS
 ): string {
   const device = `${opts.brand} ${opts.model}`;
   const amountLine =
@@ -113,20 +222,17 @@ export function statusWhatsAppMessage(
       ? `\nAmount: ₹${opts.amount.toLocaleString("en-IN")}`
       : "";
 
-  const messages: Record<RepairStatus, string> = {
-    REQUESTED: `Hi ${opts.customerName}, your repair request for ${device} is confirmed (ID: ${opts.trackingId}). Visit ${storeInfo.name} at ${storeInfo.address}. Call ${storeInfo.phone}.`,
-    RECEIVED: `Hi ${opts.customerName}, your ${device} has been submitted for repair at ${storeInfo.name}. Tracking ID: ${opts.trackingId}. We'll keep you updated here.`,
-    DIAGNOSING: `Hi ${opts.customerName}, we're diagnosing your ${device} (ID: ${opts.trackingId}). We'll share an update shortly.`,
-    IN_PROGRESS: `Hi ${opts.customerName}, repair on your ${device} is now in progress (ID: ${opts.trackingId}).${amountLine}`,
-    READY: `Hi ${opts.customerName}, great news — your ${device} is ready for pickup! Tracking ID: ${opts.trackingId}.${amountLine}\nStore: ${storeInfo.address}\nHours: ${storeInfo.hours}`,
-    COMPLETED: `Hi ${opts.customerName}, your ${device} repair is complete and delivered. Thank you for choosing ${storeInfo.name}! ID: ${opts.trackingId}.${amountLine}`,
-    CANCELLED: `Hi ${opts.customerName}, your repair request for ${device} (ID: ${opts.trackingId}) has been cancelled. Contact us at ${storeInfo.phone} if you need help.`,
+  const messages: Partial<Record<RepairStatus, string>> = {
+    RECEIVED: `Hi ${opts.customerName}, we received your ${device} (ID: ${opts.trackingId}). Diagnosis will start soon. — ${storeInfo.name}`,
+    READY: `Hi ${opts.customerName}, your ${device} (ID: ${opts.trackingId}) is ready for pickup.${amountLine}\nCall ${storeInfo.phone} — ${storeInfo.name}`,
   };
 
-  return messages[opts.status];
+  return (
+    messages[opts.status] ||
+    `Hi ${opts.customerName}, update on ${device} (${opts.trackingId}): ${STATUS_LABELS[opts.status]}.${amountLine} — ${storeInfo.name}`
+  );
 }
 
-/** Variables for Twilio Content Template — map to {{1}}…{{6}} in Meta template */
 export function repairWhatsAppTemplateVars(
   opts: {
     customerName: string;
@@ -150,24 +256,3 @@ export function repairWhatsAppTemplateVars(
     "6": `${storeInfo.name}, ${storeInfo.address}, ${storeInfo.phone}`,
   };
 }
-
-export function sellWhatsAppTemplateVars(opts: {
-  customerName: string;
-  brand: string;
-  model: string;
-  storage: string;
-  estimatedPrice: number;
-  inquiryId: string;
-  storeName: string;
-  storeAddress: string;
-  storePhone: string;
-}): Record<string, string> {
-  return {
-    "1": opts.customerName,
-    "2": `${opts.brand} ${opts.model} (${opts.storage})`,
-    "3": `₹${opts.estimatedPrice.toLocaleString("en-IN")}`,
-    "4": opts.inquiryId,
-    "5": `${opts.storeName}, ${opts.storeAddress}, ${opts.storePhone}`,
-  };
-}
-

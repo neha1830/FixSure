@@ -14,6 +14,11 @@ model RepairRequest {
   customerName    String
   phoneNumber     String
   email           String?
+  deviceType      String   @default("phone")
+  serviceMode     String   @default("STORE")
+  serviceAddress  String?
+  preferredDate   String?
+  preferredTime   String?
   brand           String
   model           String
   storage         String?
@@ -94,12 +99,42 @@ model WhatsAppLog {
 }
 
 model StoreSettings {
-  id        String   @id @default("default")
-  name      String
-  address   String
-  phone     String
-  hours     String
-  mapsUrl   String?
+  id               String   @id @default("default")
+  name             String
+  address          String
+  phone            String
+  hours            String
+  mapsUrl          String?
+  heroHeadline     String   @default("Trusted device repair — with every step visible.")
+  heroSubtext      String   @default("Check price in seconds, book a store visit, track live updates, or sell with a fair estimate.")
+  heroBadge        String   @default("Store visits · 90-day warranty · live track")
+  seoTitle         String   @default("PhoneRepairO — Trusted device repair & buyback")
+  seoDescription   String   @default("Check price, book a repair, track every stage, or get a fair sell estimate.")
+  trustIntro       String   @default("PhoneRepairO is built so customers never wonder what happens behind the counter.")
+  privacyBlurb     String   @default("We never access photos without permission. No sign-out or factory reset required.")
+  warrantyDays     Int      @default(90)
+  doorstepMinutes  Int      @default(90)
+  priceLockDays    Int      @default(7)
+  doorstepFee      Float    @default(299)
+  requestValidDays Int      @default(3)
+  ctaPrimaryLabel  String   @default("Check price")
+  ctaPrimaryHref   String   @default("/price")
+  ctaSecondaryLabel String  @default("Book repair")
+  ctaSecondaryHref String   @default("/repair")
+  updatedAt        DateTime @updatedAt
+}
+
+model ContentItem {
+  id        String   @id @default(cuid())
+  type      String
+  key       String?
+  title     String
+  subtitle  String?
+  body      String?
+  meta      String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
@@ -128,4 +163,27 @@ model TroubleshootStepItem {
   detail      String
   sortOrder   Int      @default(0)
   scenario    TroubleshootScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}
+
+model ContactInquiry {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phoneNumber String?
+  message     String
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomerReview {
+  id          String   @id @default(cuid())
+  name        String
+  device      String?
+  rating      Int      @default(5)
+  body        String
+  phoneNumber String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

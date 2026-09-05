@@ -6,18 +6,20 @@ type Props = {
   validUntil?: string | Date | null;
   amountLabel?: string;
   className?: string;
+  lockDays?: number;
 };
 
 export function PriceLockBadge({
   validUntil,
   amountLabel = "estimate",
   className = "",
+  lockDays = PRICE_LOCK_DAYS,
 }: Props) {
   const until = validUntil ? new Date(validUntil) : null;
   const valid = until ? isEstimateValid(until) : true;
   const dateText = until
     ? formatEstimateExpiry(until)
-    : `${PRICE_LOCK_DAYS} days from today`;
+    : `${lockDays} days from today`;
 
   return (
     <div
@@ -32,7 +34,7 @@ export function PriceLockBadge({
       </p>
       <p className="mt-1 leading-relaxed opacity-90">
         {valid
-          ? `This ${amountLabel} is held for ${PRICE_LOCK_DAYS} days — valid until ${dateText}. Visit the store before then to honour it (final amount still confirmed after diagnosis/inspection).`
+          ? `This ${amountLabel} is held for ${lockDays} days — valid until ${dateText}. Visit the store before then to honour it (final amount still confirmed after diagnosis/inspection).`
           : `This ${amountLabel} expired on ${dateText}. Ask us for a fresh quote — market parts prices change.`}
       </p>
     </div>

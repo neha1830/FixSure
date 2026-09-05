@@ -26,11 +26,30 @@ export async function PUT(req: NextRequest) {
       phone: body.phone,
       hours: body.hours,
       mapsUrl: body.mapsUrl,
+      heroHeadline: body.heroHeadline,
+      heroSubtext: body.heroSubtext,
+      heroBadge: body.heroBadge,
+      seoTitle: body.seoTitle,
+      seoDescription: body.seoDescription,
+      trustIntro: body.trustIntro,
+      privacyBlurb: body.privacyBlurb,
+      warrantyDays: body.warrantyDays,
+      doorstepMinutes: body.doorstepMinutes,
+      priceLockDays: body.priceLockDays,
+      doorstepFee: body.doorstepFee,
+      requestValidDays: body.requestValidDays,
+      ctaPrimaryLabel: body.ctaPrimaryLabel,
+      ctaPrimaryHref: body.ctaPrimaryHref,
+      ctaSecondaryLabel: body.ctaSecondaryLabel,
+      ctaSecondaryHref: body.ctaSecondaryHref,
     });
 
-    return NextResponse.json({ store, message: "Store details updated." });
+    return NextResponse.json({ store, message: "Site settings updated." });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Could not save settings." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not save settings." },
+      { status: 500 }
+    );
   }
 }

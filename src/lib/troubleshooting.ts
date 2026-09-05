@@ -48,6 +48,50 @@ export const DEFAULT_SCENARIOS: ScenarioSeed[] = [
     ],
   },
   {
+    key: "glass",
+    label: "Broken outer display glass",
+    description: "Glass cracked but display may still work",
+    steps: [
+      {
+        title: "Check if the image still looks normal",
+        detail:
+          "If colors and touch work under cracked glass, note that — outer glass and full display assembly are priced differently.",
+      },
+      {
+        title: "Avoid pressing hard on cracks",
+        detail:
+          "Pressure can spread damage to the LCD/OLED. Use a case or screen protector temporarily if you must keep using it.",
+      },
+      {
+        title: "Photograph the damage",
+        detail:
+          "A clear photo helps us confirm whether glass-only or full display replacement is needed before you visit.",
+      },
+    ],
+  },
+  {
+    key: "backglass",
+    label: "Cracked back glass",
+    description: "Rear glass damage",
+    steps: [
+      {
+        title: "Check wireless charging and cameras",
+        detail:
+          "Test wireless charge and rear cameras. Note any issues — the quote may include camera lens or wireless coil checks.",
+      },
+      {
+        title: "Tape sharp edges carefully",
+        detail:
+          "Cover sharp glass with clear tape so you don’t cut yourself while carrying the phone.",
+      },
+      {
+        title: "Avoid moisture near cracks",
+        detail:
+          "Gaps in back glass let dust and moisture in. Keep the phone dry until repair.",
+      },
+    ],
+  },
+  {
     key: "battery",
     label: "Battery drain / swelling / sudden shutdown",
     description: "Power and battery health issues",
@@ -320,6 +364,12 @@ export const PHONE_BRANDS = [
   "Realme",
   "Motorola",
   "Nothing",
+  "iQOO",
+  "Poco",
+  "Nokia",
+  "Honor",
+  "Asus",
+  "Huawei",
   "Other",
 ] as const;
 

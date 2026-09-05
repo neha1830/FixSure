@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { getStoreSettings } from "@/lib/store";
 import "./globals.css";
 
 const display = Bricolage_Grotesque({
@@ -16,11 +17,17 @@ const body = Figtree({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "FixSure — Trusted phone repair & buyback",
-  description:
-    "Troubleshoot free, book transparent repairs, or get a fair sell estimate. Track every stage with your mobile number.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getStoreSettings();
+  return {
+    title: store.seoTitle,
+    description: store.seoDescription,
+    icons: {
+      icon: "/logo.png",
+      apple: "/logo.png",
+    },
+  };
+}
 
 export default function RootLayout({
   children,

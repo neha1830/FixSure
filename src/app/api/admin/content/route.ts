@@ -6,7 +6,7 @@ import {
   ensureContentSeeded,
   listContent,
 } from "@/lib/site-content";
-import { revalidatePublicSite } from "@/lib/cache-tags";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();

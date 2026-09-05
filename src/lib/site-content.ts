@@ -2,6 +2,9 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { CACHE_TAGS } from "./cache-tags";
+import { parseMeta } from "./content-meta";
+
+export { parseMeta };
 
 export const CONTENT_TYPES = [
   "device",
@@ -27,15 +30,6 @@ export type ContentItemDto = {
   sortOrder: number;
   active: boolean;
 };
-
-export function parseMeta(meta: string | null | undefined): Record<string, unknown> {
-  if (!meta) return {};
-  try {
-    return JSON.parse(meta) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
 
 type SeedItem = {
   type: ContentType;
@@ -171,14 +165,8 @@ export async function getContentByType(
   return all.filter((item) => item.type === type);
 }
 
-export type PricingContext = {
-  baseByIssue: Record<string, number>;
-  brandMult: Record<string, number>;
-  deviceMult: Record<string, number>;
-  doorstepFee: number;
-  priceLockDays: number;
-  warrantyDays: number;
-};
+export type { PricingContext } from "./pricing";
+import type { PricingContext } from "./pricing";
 
 export async function getPricingContext(): Promise<PricingContext> {
   const { getStoreSettings } = await import("./store");

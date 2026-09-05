@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin, unauthorized } from "@/lib/auth";
-import { revalidatePublicSite } from "@/lib/cache-tags";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();

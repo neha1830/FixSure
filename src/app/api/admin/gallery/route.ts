@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireAdmin, unauthorized } from "@/lib/auth";
-import { revalidatePublicSite } from "@/lib/cache-tags";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 async function saveUpload(file: File | null, prefix: string) {
   if (!file || file.size === 0) return null;

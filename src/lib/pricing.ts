@@ -1,5 +1,13 @@
-import { getPricingContext, type PricingContext } from "./site-content";
-import { getStoreSettings } from "./store";
+/** Client-safe pricing helpers (no server/DB imports). */
+
+export type PricingContext = {
+  baseByIssue: Record<string, number>;
+  brandMult: Record<string, number>;
+  deviceMult: Record<string, number>;
+  doorstepFee: number;
+  priceLockDays: number;
+  warrantyDays: number;
+};
 
 /** Fallback when DB content is empty — prefer admin-managed Content. */
 const FALLBACK_BASE: Record<string, number> = {
@@ -71,21 +79,6 @@ export function estimateRepairChargeFromContext(
     total += ctx.doorstepFee;
   }
   return total;
-}
-
-export async function estimateRepairCharge(opts: {
-  brand: string;
-  issueCategory: string;
-  deviceType?: string;
-  serviceMode?: string;
-}): Promise<number> {
-  const ctx = await getPricingContext();
-  return estimateRepairChargeFromContext(opts, ctx);
-}
-
-export async function getPriceLockDays(): Promise<number> {
-  const store = await getStoreSettings();
-  return store.priceLockDays;
 }
 
 const SELL_BASE: Record<string, number> = {

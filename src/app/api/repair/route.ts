@@ -3,8 +3,8 @@ import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/db";
 import {
   estimateRepairCharge,
-  getEstimateValidUntil,
-} from "@/lib/pricing";
+} from "@/lib/pricing-server";
+import { getEstimateValidUntil } from "@/lib/pricing";
 import { getStoreSettings } from "@/lib/store";
 
 const trackingId = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);

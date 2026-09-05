@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdmin, unauthorized } from "@/lib/auth";
+import { revalidatePublicSite } from "@/lib/revalidate-public";
 
 export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();
@@ -20,6 +21,7 @@ export async function PATCH(req: NextRequest) {
       data: { status },
     });
 
+    revalidatePublicSite("reviews");
     return NextResponse.json({ review });
   } catch (err) {
     console.error(err);
@@ -38,5 +40,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
   }
   await prisma.customerReview.delete({ where: { id } });
+  revalidatePublicSite("reviews");
   return NextResponse.json({ ok: true });
 }

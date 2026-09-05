@@ -6,7 +6,7 @@ import {
   CONDITIONS,
   PHONE_BRANDS,
   STORAGE_OPTIONS,
-} from "@/lib/troubleshooting";
+} from "@/lib/troubleshooting-constants";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 
 type Result = {

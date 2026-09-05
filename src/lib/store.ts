@@ -1,5 +1,22 @@
-import { unstable_noStore as noStore } from "next/cache";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
+import { CACHE_TAGS } from "./cache-tags";
+import {
+  REPAIR_STATUSES,
+  STATUS_LABELS,
+  WHATSAPP_NOTIFY_STATUSES,
+  shouldSendRepairWhatsApp,
+  type RepairStatus,
+} from "./store-constants";
+
+export {
+  REPAIR_STATUSES,
+  STATUS_LABELS,
+  WHATSAPP_NOTIFY_STATUSES,
+  shouldSendRepairWhatsApp,
+  type RepairStatus,
+};
 
 export type StoreInfo = {
   name: string;
@@ -110,8 +127,7 @@ function mapRow(row: {
   };
 }
 
-export async function getStoreSettings(): Promise<StoreInfo> {
-  noStore();
+async function loadStoreSettings(): Promise<StoreInfo> {
   try {
     const row = await prisma.storeSettings.findUnique({
       where: { id: "default" },
@@ -123,10 +139,19 @@ export async function getStoreSettings(): Promise<StoreInfo> {
   }
 }
 
+const getCachedStoreSettings = unstable_cache(
+  loadStoreSettings,
+  ["store-settings"],
+  { tags: [CACHE_TAGS.store], revalidate: 300 }
+);
+
+/** Public store settings — request-deduped and cached ~5 minutes. */
+export const getStoreSettings = cache(() => getCachedStoreSettings());
+
 export async function saveStoreSettings(
   data: Partial<StoreInfo>
 ): Promise<StoreInfo> {
-  const current = await getStoreSettings();
+  const current = await loadStoreSettings();
   const next: StoreInfo = {
     name: data.name?.trim() || current.name,
     address: data.address?.trim() || current.address,
@@ -171,38 +196,6 @@ export async function saveStoreSettings(
   });
 
   return next;
-}
-
-export const REPAIR_STATUSES = [
-  "REQUESTED",
-  "RECEIVED",
-  "DIAGNOSING",
-  "IN_PROGRESS",
-  "READY",
-  "COMPLETED",
-  "CANCELLED",
-] as const;
-
-export type RepairStatus = (typeof REPAIR_STATUSES)[number];
-
-export const STATUS_LABELS: Record<RepairStatus, string> = {
-  REQUESTED: "Request received",
-  RECEIVED: "Received at store",
-  DIAGNOSING: "Diagnosing",
-  IN_PROGRESS: "Repair in progress",
-  READY: "Ready for pickup",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
-};
-
-/** Statuses that send WhatsApp to the customer when selected in admin */
-export const WHATSAPP_NOTIFY_STATUSES: RepairStatus[] = [
-  "RECEIVED",
-  "READY",
-];
-
-export function shouldSendRepairWhatsApp(status: RepairStatus): boolean {
-  return WHATSAPP_NOTIFY_STATUSES.includes(status);
 }
 
 export function statusWhatsAppMessage(

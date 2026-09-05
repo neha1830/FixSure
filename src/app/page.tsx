@@ -1,7 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getStoreSettings } from "@/lib/store";
-import { prisma } from "@/lib/db";
-import { getContentByType } from "@/lib/site-content";
+import { getAllActiveContent } from "@/lib/site-content";
+import { getApprovedReviews, getGalleryPreview } from "@/lib/public-data";
 import { BrandMark } from "@/components/BrandMark";
 import { SiteLogo } from "@/components/SiteLogo";
 import { BrandLogoLink } from "@/components/BrandLogoLink";
@@ -27,48 +28,33 @@ const stages = [
 ];
 
 export default async function HomePage() {
-  const store = await getStoreSettings();
-  const [
-    devices,
-    brands,
-    process,
-    services,
-    trust,
-    why,
-    testimonials,
-    faqs,
-    galleryPreview,
-    customerReviews,
-  ] = await Promise.all([
-    getContentByType("device"),
-    getContentByType("brand"),
-    getContentByType("process"),
-    getContentByType("service"),
-    getContentByType("trust"),
-    getContentByType("why"),
-    getContentByType("testimonial"),
-    getContentByType("faq"),
-    prisma.galleryItem.findMany({
-      where: { published: true, consentGiven: true },
-      orderBy: { createdAt: "desc" },
-      take: 2,
-    }),
-    prisma.customerReview.findMany({
-      where: { status: "APPROVED" },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
+  const [store, content, galleryPreview, customerReviews] = await Promise.all([
+    getStoreSettings(),
+    getAllActiveContent(),
+    getGalleryPreview(),
+    getApprovedReviews(6),
   ]);
+
+  const devices = content.filter((c) => c.type === "device");
+  const brands = content.filter((c) => c.type === "brand");
+  const process = content.filter((c) => c.type === "process");
+  const services = content.filter((c) => c.type === "service");
+  const trust = content.filter((c) => c.type === "trust");
+  const why = content.filter((c) => c.type === "why");
+  const testimonials = content.filter((c) => c.type === "testimonial");
+  const faqs = content.filter((c) => c.type === "faq");
 
   return (
     <div className="relative overflow-hidden">
       {/* Full-bleed hero */}
       <section className="relative min-h-[92vh] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/images/hero-repair.jpg"
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="hero-scrim absolute inset-0" />
         <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 sm:justify-center sm:pb-24">
@@ -145,11 +131,12 @@ export default async function HomePage() {
 
       {devices.length > 0 && (
         <section className="section-photo relative py-20">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/devices-banner.jpg"
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
           />
           <div className="relative z-10 mx-auto max-w-6xl px-5">
             <p className="font-[family-name:var(--font-display)] text-3xl font-bold text-white sm:text-4xl">

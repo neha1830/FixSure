@@ -6,6 +6,7 @@ import {
   ensureContentSeeded,
   listContent,
 } from "@/lib/site-content";
+import { revalidatePublicSite } from "@/lib/cache-tags";
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
         active: body.active !== false,
       },
     });
+    revalidatePublicSite("content");
     return NextResponse.json({ item });
   } catch (err) {
     console.error(err);
@@ -80,6 +82,7 @@ export async function PUT(req: NextRequest) {
         ...(body.active !== undefined ? { active: Boolean(body.active) } : {}),
       },
     });
+    revalidatePublicSite("content");
     return NextResponse.json({ item });
   } catch (err) {
     console.error(err);
@@ -96,6 +99,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "id required" }, { status: 400 });
     }
     await prisma.contentItem.delete({ where: { id } });
+    revalidatePublicSite("content");
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

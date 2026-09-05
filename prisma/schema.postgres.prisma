@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 // PRODUCTION / QA / CI ONLY — Neon Postgres (never use for local day-to-day)

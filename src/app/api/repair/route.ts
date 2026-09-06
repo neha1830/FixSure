@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     }
 
     const device = deviceType || "phone";
-    const estimatedCharge = await estimateRepairCharge({
+    const range = await estimateRepairCharge({
       brand,
       issueCategory,
       deviceType: device,
@@ -96,14 +96,15 @@ export async function POST(req: Request) {
         issueDescription,
         troubleshootTried: Boolean(troubleshootTried),
         privacyAck: true,
-        estimatedCharge,
+        estimatedCharge: range.min,
+        estimatedChargeMax: range.max,
         estimateValidUntil,
         status: "REQUESTED",
         statusLogs: {
           create: {
             status: "REQUESTED",
-            message: `Online repair request submitted. Bring device within ${store.requestValidDays} days or request becomes void.`,
-            amount: estimatedCharge,
+            message: `Online repair request submitted. Bring device within ${store.requestValidDays} days or request becomes void. Estimate ₹${range.min.toLocaleString("en-IN")}–₹${range.max.toLocaleString("en-IN")} (copy→original, all-in).`,
+            amount: range.min,
             whatsappSent: false,
           },
         },
@@ -113,13 +114,17 @@ export async function POST(req: Request) {
     return NextResponse.json({
       trackingId: tid,
       phoneNumber,
-      estimatedCharge,
+      estimatedChargeMin: range.min,
+      estimatedChargeMax: range.max,
+      estimatedCharge: range.min,
       estimateValidUntil: estimateValidUntil.toISOString(),
       priceLockDays: store.priceLockDays,
       requestValidDays: store.requestValidDays,
       visitBy: visitBy.toISOString(),
       serviceMode: "STORE",
       store,
+      rangeNote:
+        "Lower = copy/compatible parts. Higher = original parts. Both include technician charges.",
       message: `Request saved. Bring your phone to the store within ${store.requestValidDays} days — after that this request becomes null and void. Track anytime with your mobile number.`,
     });
   } catch (err) {

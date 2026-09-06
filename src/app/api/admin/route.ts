@@ -51,6 +51,10 @@ export async function GET(req: NextRequest) {
   await ensureContentSeeded();
   const content = await listContent();
 
+  const { listAllParts, ensurePartsSeeded } = await import("@/lib/parts");
+  await ensurePartsSeeded();
+  const parts = await listAllParts();
+
   return NextResponse.json({
     repairs,
     sells,
@@ -61,6 +65,7 @@ export async function GET(req: NextRequest) {
     contacts,
     reviews,
     content,
+    parts,
   });
 }
 

@@ -1,21 +1,13 @@
 import { NextResponse } from "next/server";
-import {
-  estimateRepairCharge,
-} from "@/lib/pricing-server";
-import {
-  getEstimateValidUntil,
-} from "@/lib/pricing";
+import { estimateRepairCharge } from "@/lib/pricing-server";
+import { getEstimateValidUntil } from "@/lib/pricing";
 import { getPricingContext } from "@/lib/site-content";
 import { getStoreSettings } from "@/lib/store";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const {
-      brand,
-      issueCategory,
-      deviceType = "phone",
-    } = body;
+    const { brand, issueCategory, deviceType = "phone" } = body;
 
     if (!brand || !issueCategory) {
       return NextResponse.json(
@@ -24,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const [estimatedCharge, ctx, store] = await Promise.all([
+    const [range, ctx, store] = await Promise.all([
       estimateRepairCharge({
         brand,
         issueCategory,
@@ -40,12 +32,17 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({
-      estimatedCharge,
+      estimatedChargeMin: range.min,
+      estimatedChargeMax: range.max,
+      /** @deprecated use estimatedChargeMin */
+      estimatedCharge: range.min,
       estimateValidUntil: estimateValidUntil.toISOString(),
       priceLockDays: ctx.priceLockDays,
       warrantyDays: store.warrantyDays,
       requestValidDays: store.requestValidDays,
       currency: "INR",
+      rangeNote:
+        "Lower end = copy/compatible parts (all-in). Higher end = original parts (all-in). Includes technician labour.",
     });
   } catch (err) {
     console.error(err);

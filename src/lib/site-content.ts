@@ -47,16 +47,16 @@ const SEED: SeedItem[] = [
   { type: "device", key: "macbook", title: "MacBook / Laptop", subtitle: "Screens, batteries, ports", meta: { multiplier: 2.1 }, sortOrder: 2 },
   { type: "device", key: "smartwatch", title: "Smartwatch", subtitle: "Apple Watch & more", meta: { multiplier: 1.15 }, sortOrder: 3 },
 
-  { type: "service", key: "screen", title: "Screen / Display Replacement", subtitle: "Cracked, blank, or flickering displays", meta: { basePrice: 2499 }, sortOrder: 0 },
-  { type: "service", key: "glass", title: "Broken Display Glass", subtitle: "Outer glass damage with working LCD/OLED", meta: { basePrice: 1999 }, sortOrder: 1 },
-  { type: "service", key: "backglass", title: "Back Glass Replacement", subtitle: "Shattered or cracked rear glass", meta: { basePrice: 2299 }, sortOrder: 2 },
-  { type: "service", key: "battery", title: "Battery Replacement", subtitle: "Drain, swelling, or sudden shutdowns", meta: { basePrice: 1499 }, sortOrder: 3 },
-  { type: "service", key: "charging", title: "Charging Port Replacement", subtitle: "Loose port, slow charge, no charge", meta: { basePrice: 999 }, sortOrder: 4 },
-  { type: "service", key: "camera", title: "Camera Repair", subtitle: "Blurry lens, focus, or module issues", meta: { basePrice: 1799 }, sortOrder: 5 },
-  { type: "service", key: "speaker", title: "Speaker / Mic Repair", subtitle: "Crackling, low volume, or no sound", meta: { basePrice: 899 }, sortOrder: 6 },
-  { type: "service", key: "software", title: "Software Issues", subtitle: "Boot loops, updates, performance", meta: { basePrice: 499 }, sortOrder: 7 },
-  { type: "service", key: "water", title: "Water / Liquid Damage", subtitle: "Diagnostics and board-level care", meta: { basePrice: 2999 }, sortOrder: 8 },
-  { type: "service", key: "other", title: "Other / Not sure", subtitle: "Describe the issue — we’ll guide you", meta: { basePrice: 799 }, sortOrder: 9 },
+  { type: "service", key: "screen", title: "Screen / Display Replacement", subtitle: "Cracked, blank, or flickering displays", meta: { basePriceMin: 1999, basePriceMax: 4499 }, sortOrder: 0 },
+  { type: "service", key: "glass", title: "Broken Display Glass", subtitle: "Outer glass damage with working LCD/OLED", meta: { basePriceMin: 1499, basePriceMax: 2999 }, sortOrder: 1 },
+  { type: "service", key: "backglass", title: "Back Glass Replacement", subtitle: "Shattered or cracked rear glass", meta: { basePriceMin: 1799, basePriceMax: 3999 }, sortOrder: 2 },
+  { type: "service", key: "battery", title: "Battery Replacement", subtitle: "Drain, swelling, or sudden shutdowns", meta: { basePriceMin: 999, basePriceMax: 2499 }, sortOrder: 3 },
+  { type: "service", key: "charging", title: "Charging Port Replacement", subtitle: "Loose port, slow charge, no charge", meta: { basePriceMin: 699, basePriceMax: 1799 }, sortOrder: 4 },
+  { type: "service", key: "camera", title: "Camera Repair", subtitle: "Blurry lens, focus, or module issues", meta: { basePriceMin: 1299, basePriceMax: 3499 }, sortOrder: 5 },
+  { type: "service", key: "speaker", title: "Speaker / Mic Repair", subtitle: "Crackling, low volume, or no sound", meta: { basePriceMin: 599, basePriceMax: 1699 }, sortOrder: 6 },
+  { type: "service", key: "software", title: "Software Issues", subtitle: "Boot loops, updates, performance", meta: { basePriceMin: 399, basePriceMax: 999 }, sortOrder: 7 },
+  { type: "service", key: "water", title: "Water / Liquid Damage", subtitle: "Diagnostics and board-level care", meta: { basePriceMin: 1999, basePriceMax: 5999 }, sortOrder: 8 },
+  { type: "service", key: "other", title: "Other / Not sure", subtitle: "Describe the issue — we’ll guide you", meta: { basePriceMin: 499, basePriceMax: 1999 }, sortOrder: 9 },
 
   { type: "brand", key: "apple", title: "Apple", meta: { multiplier: 1.8 }, sortOrder: 0 },
   { type: "brand", key: "samsung", title: "Samsung", meta: { multiplier: 1.25 }, sortOrder: 1 },
@@ -165,8 +165,17 @@ export async function getContentByType(
   return all.filter((item) => item.type === type);
 }
 
-export type { PricingContext } from "./pricing";
-import type { PricingContext } from "./pricing";
+export type { PricingContext, PriceRange } from "./pricing";
+import type { PricingContext, PriceRange } from "./pricing";
+
+function readServicePriceRange(meta: Record<string, unknown>): PriceRange | null {
+  const legacy = Number(meta.basePrice);
+  const minRaw = Number(meta.basePriceMin ?? meta.priceCopy ?? legacy);
+  const maxRaw = Number(meta.basePriceMax ?? meta.priceOriginal ?? legacy);
+  if (Number.isNaN(minRaw) || minRaw <= 0) return null;
+  const max = !Number.isNaN(maxRaw) && maxRaw > 0 ? maxRaw : minRaw;
+  return { min: Math.min(minRaw, max), max: Math.max(minRaw, max) };
+}
 
 export async function getPricingContext(): Promise<PricingContext> {
   const { getStoreSettings } = await import("./store");
@@ -177,12 +186,11 @@ export async function getPricingContext(): Promise<PricingContext> {
     getContentByType("device"),
   ]);
 
-  const baseByIssue: Record<string, number> = {};
+  const baseByIssue: Record<string, PriceRange> = {};
   for (const s of services) {
     const key = (s.key || s.title).toLowerCase();
-    const meta = parseMeta(s.meta);
-    const price = Number(meta.basePrice);
-    if (!Number.isNaN(price) && price > 0) baseByIssue[key] = price;
+    const range = readServicePriceRange(parseMeta(s.meta));
+    if (range) baseByIssue[key] = range;
   }
 
   const brandMult: Record<string, number> = {};

@@ -23,6 +23,7 @@ type Repair = {
   issueDescription: string;
   status: string;
   estimatedCharge: number | null;
+  estimatedChargeMax?: number | null;
   estimateValidUntil?: string | null;
   finalAmount: number | null;
   statusLogs: Log[];
@@ -94,6 +95,16 @@ function RepairCard({
             <p className="text-xs uppercase text-ink-soft/60">Estimated</p>
             <p className="text-xl font-bold">
               ₹{(repair.estimatedCharge ?? 0).toLocaleString("en-IN")}
+              {repair.estimatedChargeMax != null &&
+                repair.estimatedChargeMax > (repair.estimatedCharge ?? 0) && (
+                  <>
+                    {" "}
+                    – ₹{repair.estimatedChargeMax.toLocaleString("en-IN")}
+                  </>
+                )}
+            </p>
+            <p className="mt-1 text-xs text-ink-soft/55">
+              Copy → original (all-in)
             </p>
           </div>
           <div className="rounded-xl bg-fog p-4">

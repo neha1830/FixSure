@@ -24,7 +24,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Admin (hidden from nav): `/admin` — default password `fixsure-admin` (change in Store settings).
+Admin (hidden from nav): `/admin` — first-time default password `fixsure-admin` (stored in DB; change under Site settings).
 
 ## Scripts
 

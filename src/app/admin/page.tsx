@@ -5,6 +5,7 @@ import { REPAIR_STATUSES, STATUS_LABELS, RepairStatus, WHATSAPP_NOTIFY_STATUSES 
 import { ScenarioManager, Scenario } from "@/components/ScenarioManager";
 import { GalleryManager, GalleryItem } from "@/components/GalleryManager";
 import { ContentManager, ContentItem } from "@/components/ContentManager";
+import { PartsManager, PartItem } from "@/components/PartsManager";
 
 type Repair = {
   id: string;
@@ -22,6 +23,7 @@ type Repair = {
   issueDescription: string;
   status: string;
   estimatedCharge: number | null;
+  estimatedChargeMax?: number | null;
   finalAmount: number | null;
   adminNotes: string | null;
   updatedAt: string;
@@ -129,6 +131,7 @@ export default function AdminPage() {
     | "contacts"
     | "reviews"
     | "content"
+    | "parts"
     | "whatsapp"
     | "settings"
     | "scenarios"
@@ -139,6 +142,7 @@ export default function AdminPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [content, setContent] = useState<ContentItem[]>([]);
+  const [parts, setParts] = useState<PartItem[]>([]);
   const [whatsapp, setWhatsapp] = useState<WaLog[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -170,6 +174,7 @@ export default function AdminPage() {
       setContacts(data.contacts || []);
       setReviews(data.reviews || []);
       setContent(data.content || []);
+      setParts(data.parts || []);
       setWhatsapp(data.whatsapp);
       setScenarios(data.scenarios || []);
       setGallery(data.gallery || []);
@@ -353,7 +358,7 @@ export default function AdminPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="ADMIN_PASSWORD from .env"
+            placeholder="Admin password"
             required
           />
           <button
@@ -398,6 +403,7 @@ export default function AdminPage() {
               ["contacts", "Contact leads"],
               ["reviews", "Reviews"],
               ["content", "Website content"],
+              ["parts", "Parts shop"],
               ["scenarios", "Troubleshoot"],
               ["gallery", "Gallery"],
               ["whatsapp", "WhatsApp log"],
@@ -459,7 +465,10 @@ export default function AdminPage() {
                       {r.finalAmount != null
                         ? `₹${r.finalAmount}`
                         : r.estimatedCharge != null
-                          ? `~₹${r.estimatedCharge}`
+                          ? r.estimatedChargeMax != null &&
+                            r.estimatedChargeMax > r.estimatedCharge
+                            ? `₹${r.estimatedCharge}–₹${r.estimatedChargeMax}`
+                            : `~₹${r.estimatedCharge}`
                           : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -674,6 +683,16 @@ export default function AdminPage() {
             items={content}
             onChanged={() => load(password)}
           />
+        )}
+
+        {tab === "parts" && (
+          <div className="mt-6">
+            <PartsManager
+              password={password}
+              parts={parts}
+              onChanged={() => load(password)}
+            />
+          </div>
         )}
 
         {tab === "scenarios" && (
@@ -988,7 +1007,10 @@ export default function AdminPage() {
                   Change admin password
                 </h2>
                 <p className="mt-1 text-sm text-ink-soft/70">
-                  Bookmark{" "}
+                  Password is stored in the database only (not in .env). Default
+                  on first setup is{" "}
+                  <span className="font-mono text-xs">fixsure-admin</span> —
+                  change it here after login. Bookmark{" "}
                   <span className="font-mono text-xs">/admin</span> yourself —
                   the link is hidden from customers.
                 </p>

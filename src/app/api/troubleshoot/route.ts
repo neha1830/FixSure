@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     });
 
     const store = await getStoreSettings();
-    const estimatedCharge = await estimateRepairCharge({
+    const range = await estimateRepairCharge({
       brand,
       issueCategory,
     });
@@ -35,10 +35,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       steps,
-      estimatedCharge,
+      estimatedChargeMin: range.min,
+      estimatedChargeMax: range.max,
+      estimatedCharge: range.min,
       estimateValidUntil: estimateValidUntil.toISOString(),
       priceLockDays: store.priceLockDays,
       store,
+      rangeNote:
+        "Lower = copy parts (all-in). Higher = original parts (all-in).",
       message:
         "Try these steps first. If the issue remains, submit a repair request and visit our store.",
     });

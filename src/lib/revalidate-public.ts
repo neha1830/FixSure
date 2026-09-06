@@ -2,10 +2,11 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS, type CacheTagKey } from "./cache-tags";
 
 const PATHS_BY_TAG: Record<CacheTagKey, string[]> = {
-  store: ["/", "/privacy", "/contact", "/price", "/repair", "/reviews"],
+  store: ["/", "/privacy", "/contact", "/price", "/repair", "/reviews", "/parts"],
   content: ["/", "/price", "/repair", "/troubleshoot"],
   gallery: ["/", "/gallery"],
   reviews: ["/", "/reviews"],
+  parts: ["/", "/parts"],
 };
 
 /** Invalidate marketing/public caches after admin writes. Server-only. */

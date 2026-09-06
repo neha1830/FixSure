@@ -23,7 +23,8 @@ type Category = { value: string; label: string };
 export default function TroubleshootPage() {
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<TroubleshootStep[] | null>(null);
-  const [estimate, setEstimate] = useState<number | null>(null);
+  const [estimateMin, setEstimateMin] = useState<number | null>(null);
+  const [estimateMax, setEstimateMax] = useState<number | null>(null);
   const [estimateValidUntil, setEstimateValidUntil] = useState<string | null>(
     null
   );
@@ -68,7 +69,8 @@ export default function TroubleshootPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setSteps(data.steps);
-      setEstimate(data.estimatedCharge);
+      setEstimateMin(data.estimatedChargeMin ?? data.estimatedCharge);
+      setEstimateMax(data.estimatedChargeMax ?? data.estimatedCharge);
       setEstimateValidUntil(
         data.estimateValidUntil || getEstimateValidUntil().toISOString()
       );
@@ -230,11 +232,16 @@ export default function TroubleshootPage() {
                 Still not fixed?
               </h2>
               <p className="mt-2 text-sm text-ink-soft/80">
-                Submit a repair request. Estimated charge for this issue:{" "}
+                Submit a repair request. Estimated all-in range:{" "}
                 <strong className="text-teal">
-                  ₹{estimate?.toLocaleString("en-IN")}
+                  ₹{estimateMin?.toLocaleString("en-IN")}
+                  {estimateMax != null &&
+                    estimateMin != null &&
+                    estimateMax > estimateMin && (
+                      <> – ₹{estimateMax.toLocaleString("en-IN")}</>
+                    )}
                 </strong>{" "}
-                (confirmed after diagnosis).
+                (copy → original parts; confirmed after diagnosis).
               </p>
               <PriceLockBadge
                 className="mt-4"

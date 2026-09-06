@@ -28,10 +28,12 @@ function PriceForm() {
   );
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
-    estimatedCharge: number;
+    estimatedChargeMin: number;
+    estimatedChargeMax: number;
     estimateValidUntil: string;
     priceLockDays: number;
     warrantyDays: number;
+    rangeNote?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -162,10 +164,19 @@ function PriceForm() {
       {result && (
         <div className="mt-8 rounded-[1.5rem] border border-[var(--line)] bg-white p-8 shadow-[var(--shadow)]">
           <p className="text-sm font-semibold uppercase tracking-wider text-teal">
-            Your estimate
+            Your estimate (all-in)
           </p>
-          <p className="mt-2 text-4xl font-bold text-teal">
-            ₹{result.estimatedCharge.toLocaleString("en-IN")}
+          <p className="mt-2 text-3xl font-bold text-teal sm:text-4xl">
+            ₹{result.estimatedChargeMin.toLocaleString("en-IN")}
+            {result.estimatedChargeMax > result.estimatedChargeMin && (
+              <> – ₹{result.estimatedChargeMax.toLocaleString("en-IN")}</>
+            )}
+          </p>
+          <p className="mt-3 text-sm text-ink-soft/75">
+            <span className="font-semibold text-ink">Lower</span> = copy /
+            compatible parts ·{" "}
+            <span className="font-semibold text-ink">Higher</span> = original
+            parts. Both include technician labour and related charges.
           </p>
           <PriceLockBadge
             className="mt-4"

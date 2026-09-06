@@ -16,7 +16,7 @@ export type ContentItem = {
 
 const TYPE_HELP: Record<string, string> = {
   device: "Device categories on home & price. Key: phone|tablet|macbook|smartwatch. Meta: {\"multiplier\":1.35}",
-  service: "Repair services + base price. Key: screen|battery|…. Meta: {\"basePrice\":2499}",
+  service: "Repair services + all-in price range. Key: screen|battery|…. Meta: {\"basePriceMin\":1999,\"basePriceMax\":4499} (min=copy parts, max=original; both include labour)",
   brand: "Logo image only on home. Key: apple|samsung|…. Meta: {\"multiplier\":1.8,\"logoUrl\":\"/brands/apple.svg\"}",
   process: "3-step process section (title + body)",
   why: "Why us / quality points",
@@ -64,7 +64,7 @@ export function ContentManager({
       body: "",
       meta:
         filter === "service"
-          ? '{"basePrice":999}'
+          ? '{"basePriceMin":999,"basePriceMax":1999}'
           : filter === "brand" || filter === "device"
             ? '{"multiplier":1}'
             : "",
@@ -245,7 +245,7 @@ export function ContentManager({
                 className="field font-mono text-xs"
                 value={form.meta}
                 onChange={(e) => setForm({ ...form, meta: e.target.value })}
-                placeholder='{"basePrice":2499}'
+                placeholder='{"basePriceMin":1999,"basePriceMax":4499}'
               />
             </div>
             <div>

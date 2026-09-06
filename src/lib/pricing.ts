@@ -1,7 +1,9 @@
 /** Client-safe pricing helpers (no server/DB imports). */
 
+export type PriceRange = { min: number; max: number };
+
 export type PricingContext = {
-  baseByIssue: Record<string, number>;
+  baseByIssue: Record<string, PriceRange>;
   brandMult: Record<string, number>;
   deviceMult: Record<string, number>;
   doorstepFee: number;
@@ -9,18 +11,18 @@ export type PricingContext = {
   warrantyDays: number;
 };
 
-/** Fallback when DB content is empty — prefer admin-managed Content. */
-const FALLBACK_BASE: Record<string, number> = {
-  screen: 2499,
-  glass: 1999,
-  backglass: 2299,
-  battery: 1499,
-  charging: 999,
-  camera: 1799,
-  speaker: 899,
-  software: 499,
-  water: 2999,
-  other: 799,
+/** Fallback all-in ranges: copy parts (min) → original parts (max). */
+const FALLBACK_BASE: Record<string, PriceRange> = {
+  screen: { min: 1999, max: 4499 },
+  glass: { min: 1499, max: 2999 },
+  backglass: { min: 1799, max: 3999 },
+  battery: { min: 999, max: 2499 },
+  charging: { min: 699, max: 1799 },
+  camera: { min: 1299, max: 3499 },
+  speaker: { min: 599, max: 1699 },
+  software: { min: 399, max: 999 },
+  water: { min: 1999, max: 5999 },
+  other: { min: 499, max: 1999 },
 };
 
 /** @deprecated Use getStoreSettings().priceLockDays — kept for client badge fallback */
@@ -54,6 +56,29 @@ export function formatEstimateExpiry(validUntil: Date | string): string {
   });
 }
 
+export function formatPriceRange(range: PriceRange): string {
+  if (range.min === range.max) {
+    return `₹${range.min.toLocaleString("en-IN")}`;
+  }
+  return `₹${range.min.toLocaleString("en-IN")} – ₹${range.max.toLocaleString("en-IN")}`;
+}
+
+function applyMultipliers(
+  base: number,
+  brandMult: number,
+  deviceMult: number,
+  doorstepFee: number,
+  serviceMode?: string
+): number {
+  let total = Math.round((base * brandMult * deviceMult) / 50) * 50;
+  if (serviceMode === "DOORSTEP") total += doorstepFee;
+  return total;
+}
+
+/**
+ * All-in estimate range: min = copy/compatible parts, max = original parts.
+ * Both ends already include labour / technician charges baked into the base.
+ */
 export function estimateRepairChargeFromContext(
   opts: {
     brand: string;
@@ -62,11 +87,12 @@ export function estimateRepairChargeFromContext(
     serviceMode?: string;
   },
   ctx: PricingContext
-): number {
-  const base =
-    ctx.baseByIssue[opts.issueCategory.toLowerCase()] ??
+): PriceRange {
+  const key = opts.issueCategory.toLowerCase();
+  const range =
+    ctx.baseByIssue[key] ??
     ctx.baseByIssue.other ??
-    FALLBACK_BASE[opts.issueCategory] ??
+    FALLBACK_BASE[key] ??
     FALLBACK_BASE.other;
   const brandMult =
     ctx.brandMult[opts.brand.toLowerCase()] ??
@@ -74,11 +100,32 @@ export function estimateRepairChargeFromContext(
     1;
   const deviceKey = (opts.deviceType || "phone").toLowerCase();
   const deviceMult = ctx.deviceMult[deviceKey] ?? 1;
-  let total = Math.round((base * brandMult * deviceMult) / 50) * 50;
-  if (opts.serviceMode === "DOORSTEP") {
-    total += ctx.doorstepFee;
-  }
-  return total;
+
+  const min = applyMultipliers(
+    range.min,
+    brandMult,
+    deviceMult,
+    ctx.doorstepFee,
+    opts.serviceMode
+  );
+  const max = applyMultipliers(
+    range.max,
+    brandMult,
+    deviceMult,
+    ctx.doorstepFee,
+    opts.serviceMode
+  );
+
+  return { min: Math.min(min, max), max: Math.max(min, max) };
+}
+
+/** @deprecated Prefer estimateRepairChargeFromContext range; returns mid-point. */
+export function estimateRepairChargeSingleFromContext(
+  opts: Parameters<typeof estimateRepairChargeFromContext>[0],
+  ctx: PricingContext
+): number {
+  const r = estimateRepairChargeFromContext(opts, ctx);
+  return Math.round((r.min + r.max) / 2 / 50) * 50;
 }
 
 const SELL_BASE: Record<string, number> = {

@@ -17,6 +17,8 @@ type Result = {
   trackingId: string;
   phoneNumber?: string;
   estimatedCharge: number;
+  estimatedChargeMin?: number;
+  estimatedChargeMax?: number;
   estimateValidUntil?: string;
   requestValidDays?: number;
   visitBy?: string;
@@ -179,13 +181,25 @@ function RepairForm() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl bg-fog p-4">
             <p className="text-xs font-semibold uppercase text-ink-soft/60">
-              Estimated charges
+              Estimated charges (all-in)
             </p>
             <p className="mt-1 text-2xl font-bold text-teal">
-              ₹{result.estimatedCharge.toLocaleString("en-IN")}
+              ₹
+              {(
+                result.estimatedChargeMin ?? result.estimatedCharge
+              ).toLocaleString("en-IN")}
+              {result.estimatedChargeMax != null &&
+                result.estimatedChargeMax >
+                  (result.estimatedChargeMin ?? result.estimatedCharge) && (
+                  <>
+                    {" "}
+                    – ₹{result.estimatedChargeMax.toLocaleString("en-IN")}
+                  </>
+                )}
             </p>
             <p className="mt-1 text-xs text-ink-soft/60">
-              Final amount after diagnosis · up to {warrantyDays}-day warranty
+              Lower = copy parts · Higher = original · labour included · up to{" "}
+              {warrantyDays}-day warranty
             </p>
           </div>
           <div className="rounded-xl bg-fog p-4 text-sm">

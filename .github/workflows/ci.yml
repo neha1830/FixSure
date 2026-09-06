@@ -35,7 +35,6 @@ jobs:
 
     env:
       DATABASE_URL: "postgresql://fixsure:fixsure@localhost:5432/fixsure"
-      ADMIN_PASSWORD: "ci-check-only"
       WHATSAPP_MODE: "mock"
       STORE_NAME: "FixSure"
       STORE_ADDRESS: "CI"

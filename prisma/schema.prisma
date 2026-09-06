@@ -29,6 +29,7 @@ model RepairRequest {
   issueDescription String
   troubleshootTried Boolean @default(false)
   estimatedCharge Float?
+  estimatedChargeMax Float?
   estimateValidUntil DateTime?
   finalAmount     Float?
   status          String   @default("REQUESTED")
@@ -186,4 +187,22 @@ model CustomerReview {
   status      String   @default("PENDING")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model PartItem {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  deviceCategory  String
+  brand           String?
+  sku             String?
+  quality         String   @default("COPY")
+  compatibility   String?
+  price           Float
+  imageUrl        String?
+  inStock         Boolean  @default(true)
+  published       Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

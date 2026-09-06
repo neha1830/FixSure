@@ -3,6 +3,8 @@ import { getStoreSettings } from "@/lib/store";
 import { getPublishedParts } from "@/lib/parts";
 import { PartsCatalogue } from "@/components/PartsCatalogue";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata() {
   const store = await getStoreSettings();
   return {

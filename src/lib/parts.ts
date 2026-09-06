@@ -160,36 +160,41 @@ let seedPromise: Promise<void> | null = null;
 export async function ensurePartsSeeded(): Promise<void> {
   if (!seedPromise) {
     seedPromise = (async () => {
-      const count = await prisma.partItem.count();
-      if (count === 0) {
-        await prisma.partItem.createMany({
-          data: PART_SEEDS.map((p) => ({
-            title: p.title,
-            description: p.description,
-            deviceCategory: p.deviceCategory,
-            brand: p.brand || null,
-            sku: p.sku,
-            quality: p.quality,
-            compatibility: p.compatibility,
-            price: p.price,
-            imageUrl: defaultImageFor(p.deviceCategory),
-            inStock: true,
-            published: true,
-            sortOrder: p.sortOrder,
-          })),
-        });
-        return;
-      }
+      try {
+        const count = await prisma.partItem.count();
+        if (count === 0) {
+          await prisma.partItem.createMany({
+            data: PART_SEEDS.map((p) => ({
+              title: p.title,
+              description: p.description,
+              deviceCategory: p.deviceCategory,
+              brand: p.brand || null,
+              sku: p.sku,
+              quality: p.quality,
+              compatibility: p.compatibility,
+              price: p.price,
+              imageUrl: defaultImageFor(p.deviceCategory),
+              inStock: true,
+              published: true,
+              sortOrder: p.sortOrder,
+            })),
+          });
+          return;
+        }
 
-      const missing = await prisma.partItem.findMany({
-        where: { OR: [{ imageUrl: null }, { imageUrl: "" }] },
-        select: { id: true, deviceCategory: true },
-      });
-      for (const row of missing) {
-        await prisma.partItem.update({
-          where: { id: row.id },
-          data: { imageUrl: defaultImageFor(row.deviceCategory) },
+        const missing = await prisma.partItem.findMany({
+          where: { OR: [{ imageUrl: null }, { imageUrl: "" }] },
+          select: { id: true, deviceCategory: true },
         });
+        for (const row of missing) {
+          await prisma.partItem.update({
+            where: { id: row.id },
+            data: { imageUrl: defaultImageFor(row.deviceCategory) },
+          });
+        }
+      } catch (err) {
+        // Table may not exist yet during first deploy before db push.
+        console.warn("Parts seed skipped:", err);
       }
     })().catch((err) => {
       seedPromise = null;
@@ -202,14 +207,19 @@ export async function ensurePartsSeeded(): Promise<void> {
 const getCachedPublishedParts = unstable_cache(
   async () => {
     await ensurePartsSeeded();
-    return prisma.partItem.findMany({
-      where: { published: true },
-      orderBy: [
-        { deviceCategory: "asc" },
-        { sortOrder: "asc" },
-        { createdAt: "desc" },
-      ],
-    });
+    try {
+      return await prisma.partItem.findMany({
+        where: { published: true },
+        orderBy: [
+          { deviceCategory: "asc" },
+          { sortOrder: "asc" },
+          { createdAt: "desc" },
+        ],
+      });
+    } catch (err) {
+      console.warn("Parts list unavailable:", err);
+      return [];
+    }
   },
   ["parts-published"],
   { tags: [CACHE_TAGS.parts], revalidate: 120 }
@@ -219,11 +229,16 @@ export const getPublishedParts = cache(() => getCachedPublishedParts());
 
 export async function listAllParts() {
   await ensurePartsSeeded();
-  return prisma.partItem.findMany({
-    orderBy: [
-      { deviceCategory: "asc" },
-      { sortOrder: "asc" },
-      { createdAt: "desc" },
-    ],
-  });
+  try {
+    return await prisma.partItem.findMany({
+      orderBy: [
+        { deviceCategory: "asc" },
+        { sortOrder: "asc" },
+        { createdAt: "desc" },
+      ],
+    });
+  } catch (err) {
+    console.warn("Parts admin list unavailable:", err);
+    return [];
+  }
 }

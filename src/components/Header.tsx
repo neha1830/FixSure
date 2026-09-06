@@ -2,18 +2,7 @@ import Link from "next/link";
 import { getStoreSettings } from "@/lib/store";
 import { SiteLogo } from "@/components/SiteLogo";
 import { BrandMark } from "@/components/BrandMark";
-
-const links = [
-  { href: "/price", label: "Check price" },
-  { href: "/parts", label: "Buy parts" },
-  { href: "/troubleshoot", label: "Troubleshoot" },
-  { href: "/repair", label: "Repair" },
-  { href: "/sell", label: "Sell phone" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/track", label: "Track" },
-  { href: "/reviews", label: "Reviews" },
-  { href: "/contact", label: "Contact" },
-];
+import { HeaderNav } from "@/components/HeaderNav";
 
 export async function Header() {
   const store = await getStoreSettings();
@@ -32,17 +21,9 @@ export async function Header() {
             className="truncate text-xl font-bold text-ink sm:text-2xl"
           />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-ink-soft lg:flex">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="transition-colors hover:text-teal"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="hidden lg:block">
+          <HeaderNav variant="desktop" />
+        </div>
         <div className="flex items-center gap-3">
           <a
             href={`tel:${store.phone.replace(/\s/g, "")}`}
@@ -55,13 +36,9 @@ export async function Header() {
           </Link>
         </div>
       </div>
-      <nav className="flex gap-4 overflow-x-auto border-t border-[var(--line)] px-5 py-2 text-sm font-medium text-ink-soft lg:hidden">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} className="whitespace-nowrap">
-            {l.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="lg:hidden">
+        <HeaderNav variant="mobile" />
+      </div>
     </header>
   );
 }

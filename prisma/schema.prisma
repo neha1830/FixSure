@@ -25,6 +25,12 @@ model RepairRequest {
   batteryHealth   String?
   color           String?
   imei            String?
+  serialNumber    String?
+  devicePasscode  String?
+  technicianName  String?
+  dueDate         String?
+  preChecklist    String?
+  partsUsed       String?
   issueCategory   String
   issueDescription String
   troubleshootTried Boolean @default(false)

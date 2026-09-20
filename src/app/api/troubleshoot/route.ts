@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       priceLockDays: store.priceLockDays,
       store,
       rangeNote:
-        "Lower = copy parts (all-in). Higher = original parts (all-in).",
+        "Estimate includes parts and technician labour.",
       message:
         "Try these steps first. If the issue remains, submit a repair request and visit our store.",
     });

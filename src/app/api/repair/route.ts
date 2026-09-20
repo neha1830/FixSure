@@ -103,7 +103,7 @@ export async function POST(req: Request) {
         statusLogs: {
           create: {
             status: "REQUESTED",
-            message: `Online repair request submitted. Bring device within ${store.requestValidDays} days or request becomes void. Estimate ₹${range.min.toLocaleString("en-IN")}–₹${range.max.toLocaleString("en-IN")} (copy→original, all-in).`,
+            message: `Online repair request submitted. Bring device within ${store.requestValidDays} days or request becomes void. Estimate ₹${range.min.toLocaleString("en-IN")}–₹${range.max.toLocaleString("en-IN")}.`,
             amount: range.min,
             whatsappSent: false,
           },
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
       serviceMode: "STORE",
       store,
       rangeNote:
-        "Lower = copy/compatible parts. Higher = original parts. Both include technician charges.",
+        "Estimate includes parts and technician labour.",
       message: `Request saved. Bring your phone to the store within ${store.requestValidDays} days — after that this request becomes null and void. Track anytime with your mobile number.`,
     });
   } catch (err) {

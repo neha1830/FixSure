@@ -3,8 +3,15 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { CACHE_TAGS } from "./cache-tags";
 import { parseMeta } from "./content-meta";
+import {
+  SERVICE_BASE_RANGES,
+  type PricingContext,
+  type PriceRange,
+} from "./pricing";
+import { revalidatePublicSite } from "./revalidate-public";
 
 export { parseMeta };
+export type { PricingContext, PriceRange };
 
 export const CONTENT_TYPES = [
   "device",
@@ -108,25 +115,27 @@ const SEED: SeedItem[] = [
 
 let seedPromise: Promise<void> | null = null;
 
-/** Seed empty CMS once per process. Soft migrations run only when empty. */
+/** Seed empty CMS once per process. Soft migrations run when data already exists. */
 export async function ensureContentSeeded(): Promise<void> {
   if (!seedPromise) {
     seedPromise = (async () => {
       const count = await prisma.contentItem.count();
-      if (count > 0) return;
-
-      await prisma.contentItem.createMany({
-        data: SEED.map((s) => ({
-          type: s.type,
-          key: s.key || null,
-          title: s.title,
-          subtitle: s.subtitle || null,
-          body: s.body || null,
-          meta: s.meta ? JSON.stringify(s.meta) : null,
-          sortOrder: s.sortOrder,
-          active: true,
-        })),
-      });
+      if (count === 0) {
+        await prisma.contentItem.createMany({
+          data: SEED.map((s) => ({
+            type: s.type,
+            key: s.key || null,
+            title: s.title,
+            subtitle: s.subtitle || null,
+            body: s.body || null,
+            meta: s.meta ? JSON.stringify(s.meta) : null,
+            sortOrder: s.sortOrder,
+            active: true,
+          })),
+        });
+        return;
+      }
+      await migrateServicePriceRanges();
     })().catch((err) => {
       seedPromise = null;
       throw err;
@@ -165,31 +174,99 @@ export async function getContentByType(
   return all.filter((item) => item.type === type);
 }
 
-export type { PricingContext, PriceRange } from "./pricing";
-import type { PricingContext, PriceRange } from "./pricing";
-
-function readServicePriceRange(meta: Record<string, unknown>): PriceRange | null {
+function readServicePriceRange(
+  meta: Record<string, unknown>,
+  serviceKey?: string
+): PriceRange | null {
+  const hasExplicitMin =
+    meta.basePriceMin != null || meta.priceCopy != null;
+  const hasExplicitMax =
+    meta.basePriceMax != null || meta.priceOriginal != null;
   const legacy = Number(meta.basePrice);
-  const minRaw = Number(meta.basePriceMin ?? meta.priceCopy ?? legacy);
-  const maxRaw = Number(meta.basePriceMax ?? meta.priceOriginal ?? legacy);
-  if (Number.isNaN(minRaw) || minRaw <= 0) return null;
-  const max = !Number.isNaN(maxRaw) && maxRaw > 0 ? maxRaw : minRaw;
-  return { min: Math.min(minRaw, max), max: Math.max(minRaw, max) };
+
+  if (hasExplicitMin || hasExplicitMax) {
+    const minRaw = Number(meta.basePriceMin ?? meta.priceCopy ?? legacy);
+    const maxRaw = Number(meta.basePriceMax ?? meta.priceOriginal ?? legacy);
+    if (Number.isNaN(minRaw) || minRaw <= 0) return null;
+    const max = !Number.isNaN(maxRaw) && maxRaw > 0 ? maxRaw : minRaw;
+    // Legacy rows sometimes stored the same number for both — expand.
+    if (max === minRaw) {
+      const curated =
+        (serviceKey && SERVICE_BASE_RANGES[serviceKey]) ||
+        SERVICE_BASE_RANGES.other;
+      return curated;
+    }
+    return { min: Math.min(minRaw, max), max: Math.max(minRaw, max) };
+  }
+
+  // Old CMS only had basePrice (single number) → use curated copy→original range.
+  if (!Number.isNaN(legacy) && legacy > 0) {
+    const key = (serviceKey || "").toLowerCase();
+    return SERVICE_BASE_RANGES[key] ?? {
+      min: Math.max(299, Math.round((legacy * 0.55) / 50) * 50),
+      max: Math.round((legacy * 1.35) / 50) * 50,
+    };
+  }
+
+  return null;
+}
+
+/** Upgrade service rows that still only have a single basePrice. */
+async function migrateServicePriceRanges(): Promise<void> {
+  const services = await prisma.contentItem.findMany({
+    where: { type: "service" },
+  });
+  let changed = false;
+  for (const s of services) {
+    const meta = parseMeta(s.meta);
+    const hasMin = meta.basePriceMin != null || meta.priceCopy != null;
+    const hasMax = meta.basePriceMax != null || meta.priceOriginal != null;
+    if (hasMin && hasMax) {
+      const min = Number(meta.basePriceMin ?? meta.priceCopy);
+      const max = Number(meta.basePriceMax ?? meta.priceOriginal);
+      if (!Number.isNaN(min) && !Number.isNaN(max) && min !== max) continue;
+    }
+    const key = (s.key || "").toLowerCase();
+    const range =
+      SERVICE_BASE_RANGES[key] ||
+      readServicePriceRange(meta, key) ||
+      SERVICE_BASE_RANGES.other;
+    const nextMeta: Record<string, unknown> = {
+      ...meta,
+      basePriceMin: range.min,
+      basePriceMax: range.max,
+    };
+    delete nextMeta.basePrice;
+    await prisma.contentItem.update({
+      where: { id: s.id },
+      data: { meta: JSON.stringify(nextMeta) },
+    });
+    changed = true;
+  }
+  if (changed) {
+    try {
+      revalidatePublicSite("content");
+    } catch {
+      /* ignore if called outside request */
+    }
+  }
 }
 
 export async function getPricingContext(): Promise<PricingContext> {
+  await ensureContentSeeded();
   const { getStoreSettings } = await import("./store");
+  // Fresh service rows (not stale CMS cache) so ranges stay correct after migrate.
   const [store, services, brands, devices] = await Promise.all([
     getStoreSettings(),
-    getContentByType("service"),
-    getContentByType("brand"),
-    getContentByType("device"),
+    listContent("service", { activeOnly: true }),
+    listContent("brand", { activeOnly: true }),
+    listContent("device", { activeOnly: true }),
   ]);
 
   const baseByIssue: Record<string, PriceRange> = {};
   for (const s of services) {
     const key = (s.key || s.title).toLowerCase();
-    const range = readServicePriceRange(parseMeta(s.meta));
+    const range = readServicePriceRange(parseMeta(s.meta), key);
     if (range) baseByIssue[key] = range;
   }
 

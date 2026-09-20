@@ -192,14 +192,12 @@ function RepairForm() {
                 result.estimatedChargeMax >
                   (result.estimatedChargeMin ?? result.estimatedCharge) && (
                   <>
-                    {" "}
-                    – ₹{result.estimatedChargeMax.toLocaleString("en-IN")}
+                    –₹{result.estimatedChargeMax.toLocaleString("en-IN")}
                   </>
                 )}
             </p>
             <p className="mt-1 text-xs text-ink-soft/60">
-              Lower = copy parts · Higher = original · labour included · up to{" "}
-              {warrantyDays}-day warranty
+              Includes labour · up to {warrantyDays}-day warranty
             </p>
           </div>
           <div className="rounded-xl bg-fog p-4 text-sm">

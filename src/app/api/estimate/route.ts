@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       requestValidDays: store.requestValidDays,
       currency: "INR",
       rangeNote:
-        "Lower end = copy/compatible parts (all-in). Higher end = original parts (all-in). Includes technician labour.",
+        "Estimate includes parts and technician labour. Final amount after diagnosis.",
     });
   } catch (err) {
     console.error(err);

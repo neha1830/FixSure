@@ -232,16 +232,16 @@ export default function TroubleshootPage() {
                 Still not fixed?
               </h2>
               <p className="mt-2 text-sm text-ink-soft/80">
-                Submit a repair request. Estimated all-in range:{" "}
+                Submit a repair request. Estimated charges:{" "}
                 <strong className="text-teal">
                   ₹{estimateMin?.toLocaleString("en-IN")}
                   {estimateMax != null &&
                     estimateMin != null &&
                     estimateMax > estimateMin && (
-                      <> – ₹{estimateMax.toLocaleString("en-IN")}</>
+                      <>–₹{estimateMax.toLocaleString("en-IN")}</>
                     )}
-                </strong>{" "}
-                (copy → original parts; confirmed after diagnosis).
+                </strong>
+                . Confirmed after diagnosis.
               </p>
               <PriceLockBadge
                 className="mt-4"

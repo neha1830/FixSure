@@ -1,33 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { REPAIR_STATUSES, STATUS_LABELS, RepairStatus, WHATSAPP_NOTIFY_STATUSES } from "@/lib/store-constants";
 import { ScenarioManager, Scenario } from "@/components/ScenarioManager";
 import { GalleryManager, GalleryItem } from "@/components/GalleryManager";
 import { ContentManager, ContentItem } from "@/components/ContentManager";
 import { PartsManager, PartItem } from "@/components/PartsManager";
+import {
+  JobSheetForm,
+  JobSheetPrint,
+  type JobSheetRepair,
+} from "@/components/JobSheet";
+import { formatEstimateDisplay } from "@/lib/pricing";
 
-type Repair = {
-  id: string;
-  trackingId: string;
-  customerName: string;
-  phoneNumber: string;
-  brand: string;
-  model: string;
-  deviceType?: string;
-  serviceMode?: string;
-  serviceAddress?: string | null;
-  preferredDate?: string | null;
-  preferredTime?: string | null;
-  issueCategory: string;
-  issueDescription: string;
-  status: string;
-  estimatedCharge: number | null;
-  estimatedChargeMax?: number | null;
-  finalAmount: number | null;
-  adminNotes: string | null;
-  updatedAt: string;
-};
+type Repair = JobSheetRepair;
 
 type Sell = {
   id: string;
@@ -154,12 +140,27 @@ export default function AdminPage() {
   const [sendMessage, setSendMessage] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingStore, setSavingStore] = useState(false);
+  const [repairFilter, setRepairFilter] = useState<"pending" | "completed">(
+    "pending"
+  );
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [editingJob, setEditingJob] = useState<Repair | null>(null);
+  const [printJob, setPrintJob] = useState<Repair | null>(null);
   const [pwForm, setPwForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
   const [savingPw, setSavingPw] = useState(false);
+
+  const filteredRepairs = useMemo(() => {
+    if (repairFilter === "completed") {
+      return repairs.filter((r) => r.status === "COMPLETED");
+    }
+    return repairs.filter(
+      (r) => r.status !== "COMPLETED" && r.status !== "CANCELLED"
+    );
+  }, [repairs, repairFilter]);
 
   async function load(pass: string) {
     setLoading(true);
@@ -426,74 +427,135 @@ export default function AdminPage() {
         </div>
 
         {tab === "repairs" && (
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-[var(--line)] bg-white">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-[var(--line)] bg-fog/80 text-xs uppercase text-ink-soft/60">
-                <tr>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Device</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {repairs.map((r) => (
-                  <tr key={r.id} className="border-b border-[var(--line)]">
-                    <td className="px-4 py-3 font-mono text-xs">
-                      {r.trackingId}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>{r.customerName}</div>
-                      <div className="text-xs text-ink-soft/60">
-                        {r.phoneNumber}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.brand} {r.model}
-                      <div className="text-xs text-ink-soft/60">
-                        {r.deviceType || "phone"} · store visit
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-mint/50 px-2 py-1 text-xs font-semibold text-teal-deep">
-                        {STATUS_LABELS[r.status as RepairStatus] || r.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.finalAmount != null
-                        ? `₹${r.finalAmount}`
-                        : r.estimatedCharge != null
-                          ? r.estimatedChargeMax != null &&
-                            r.estimatedChargeMax > r.estimatedCharge
-                            ? `₹${r.estimatedCharge}–₹${r.estimatedChargeMax}`
-                            : `~₹${r.estimatedCharge}`
-                          : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        className="text-sm font-semibold text-teal"
-                        onClick={() => openRepair(r)}
-                      >
-                        Update
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {repairs.length === 0 && (
+          <div className="mt-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRepairFilter("pending")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    repairFilter === "pending"
+                      ? "bg-teal text-white"
+                      : "border border-[var(--line)] bg-white"
+                  }`}
+                >
+                  Pending (
+                  {
+                    repairs.filter(
+                      (r) =>
+                        r.status !== "COMPLETED" && r.status !== "CANCELLED"
+                    ).length
+                  }
+                  )
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRepairFilter("completed")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    repairFilter === "completed"
+                      ? "bg-teal text-white"
+                      : "border border-[var(--line)] bg-white"
+                  }`}
+                >
+                  Completed (
+                  {repairs.filter((r) => r.status === "COMPLETED").length})
+                </button>
+              </div>
+              <button
+                type="button"
+                className="btn-primary !py-2 text-sm"
+                onClick={() => {
+                  setEditingJob(null);
+                  setShowJobForm(true);
+                }}
+              >
+                Add job sheet
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-white">
+              <table className="w-full min-w-[820px] text-left text-sm">
+                <thead className="border-b border-[var(--line)] bg-fog/80 text-xs uppercase text-ink-soft/60">
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-ink-soft/60"
-                    >
-                      No repair requests yet.
-                    </td>
+                    <th className="px-4 py-3">ID</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Device</th>
+                    <th className="px-4 py-3">Technician</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredRepairs.map((r) => (
+                    <tr key={r.id} className="border-b border-[var(--line)]">
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {r.trackingId}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>{r.customerName}</div>
+                        <div className="text-xs text-ink-soft/60">
+                          {r.phoneNumber}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.brand} {r.model}
+                        <div className="text-xs text-ink-soft/60">
+                          {r.deviceType || "phone"}
+                          {r.dueDate ? ` · due ${r.dueDate}` : ""}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-ink-soft/75">
+                        {r.technicianName || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-mint/50 px-2 py-1 text-xs font-semibold text-teal-deep">
+                          {STATUS_LABELS[r.status as RepairStatus] || r.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.finalAmount != null
+                          ? `₹${r.finalAmount.toLocaleString("en-IN")}`
+                          : formatEstimateDisplay(
+                              r.estimatedCharge,
+                              r.estimatedChargeMax
+                            )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="text-sm font-semibold text-teal"
+                            onClick={() => setPrintJob(r)}
+                          >
+                            Job sheet
+                          </button>
+                          <button
+                            type="button"
+                            className="text-sm font-semibold text-ink-soft"
+                            onClick={() => openRepair(r)}
+                          >
+                            Status
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredRepairs.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-10 text-center text-ink-soft/60"
+                      >
+                        {repairFilter === "completed"
+                          ? "No completed jobs yet."
+                          : "No pending jobs. Click Add job sheet for a walk-in."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -1108,8 +1170,21 @@ export default function AdminPage() {
               type="number"
               value={finalAmount}
               onChange={(e) => setFinalAmount(e.target.value)}
-              placeholder={`Estimate ~${selected.estimatedCharge ?? ""}`}
+              placeholder={`Estimate ${formatEstimateDisplay(selected.estimatedCharge, selected.estimatedChargeMax)}`}
             />
+
+            <div className="mt-3">
+              <button
+                type="button"
+                className="text-sm font-semibold text-teal"
+                onClick={() => {
+                  setPrintJob(selected);
+                  setSelected(null);
+                }}
+              >
+                Open full job sheet
+              </button>
+            </div>
 
             <label className="field-label mt-4">Admin notes</label>
             <textarea
@@ -1150,6 +1225,42 @@ export default function AdminPage() {
             </div>
           </form>
         </div>
+      )}
+
+      {(showJobForm || editingJob) && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center">
+          <JobSheetForm
+            password={password}
+            storeName={storeForm.name}
+            storePhone={storeForm.phone}
+            storeAddress={storeForm.address}
+            initial={editingJob}
+            onCancel={() => {
+              setShowJobForm(false);
+              setEditingJob(null);
+            }}
+            onCreated={async () => {
+              setShowJobForm(false);
+              setEditingJob(null);
+              await load(password);
+            }}
+          />
+        </div>
+      )}
+
+      {printJob && (
+        <JobSheetPrint
+          repair={printJob}
+          storeName={storeForm.name}
+          storePhone={storeForm.phone}
+          storeAddress={storeForm.address}
+          onClose={() => setPrintJob(null)}
+          onEdit={() => {
+            setEditingJob(printJob);
+            setPrintJob(null);
+            setShowJobForm(false);
+          }}
+        />
       )}
     </div>
   );

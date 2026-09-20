@@ -169,14 +169,12 @@ function PriceForm() {
           <p className="mt-2 text-3xl font-bold text-teal sm:text-4xl">
             ₹{result.estimatedChargeMin.toLocaleString("en-IN")}
             {result.estimatedChargeMax > result.estimatedChargeMin && (
-              <> – ₹{result.estimatedChargeMax.toLocaleString("en-IN")}</>
+              <>–₹{result.estimatedChargeMax.toLocaleString("en-IN")}</>
             )}
           </p>
           <p className="mt-3 text-sm text-ink-soft/75">
-            <span className="font-semibold text-ink">Lower</span> = copy /
-            compatible parts ·{" "}
-            <span className="font-semibold text-ink">Higher</span> = original
-            parts. Both include technician labour and related charges.
+            Estimate includes parts and technician labour. Final amount after
+            diagnosis.
           </p>
           <PriceLockBadge
             className="mt-4"

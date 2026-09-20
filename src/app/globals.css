@@ -253,3 +253,15 @@ body {
   width: 2px;
   background: linear-gradient(180deg, var(--mint), rgba(184, 224, 210, 0.15));
 }
+
+@media print {
+  header,
+  footer,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+}

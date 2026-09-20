@@ -67,8 +67,7 @@ export default async function PartsPage() {
             Need it fitted?
           </p>
           <p className="mt-2 text-sm text-ink-soft/75">
-            Check an all-in repair estimate (copy → original parts) or book a
-            store visit.
+            Check a repair estimate or book a store visit.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/price" className="btn-primary">

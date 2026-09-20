@@ -12,7 +12,7 @@ export type PricingContext = {
 };
 
 /** Fallback all-in ranges: copy parts (min) → original parts (max). */
-const FALLBACK_BASE: Record<string, PriceRange> = {
+export const SERVICE_BASE_RANGES: Record<string, PriceRange> = {
   screen: { min: 1999, max: 4499 },
   glass: { min: 1499, max: 2999 },
   backglass: { min: 1799, max: 3999 },
@@ -24,6 +24,9 @@ const FALLBACK_BASE: Record<string, PriceRange> = {
   water: { min: 1999, max: 5999 },
   other: { min: 499, max: 1999 },
 };
+
+/** @deprecated Use SERVICE_BASE_RANGES */
+const FALLBACK_BASE = SERVICE_BASE_RANGES;
 
 /** @deprecated Use getStoreSettings().priceLockDays — kept for client badge fallback */
 export const PRICE_LOCK_DAYS = 7;
@@ -60,7 +63,18 @@ export function formatPriceRange(range: PriceRange): string {
   if (range.min === range.max) {
     return `₹${range.min.toLocaleString("en-IN")}`;
   }
-  return `₹${range.min.toLocaleString("en-IN")} – ₹${range.max.toLocaleString("en-IN")}`;
+  return `₹${range.min.toLocaleString("en-IN")}–₹${range.max.toLocaleString("en-IN")}`;
+}
+
+/** Format estimate fields from a repair / API payload as ₹X–₹Y. */
+export function formatEstimateDisplay(
+  min: number | null | undefined,
+  max?: number | null
+): string {
+  if (min == null && max == null) return "—";
+  const lo = min ?? max ?? 0;
+  const hi = max ?? min ?? 0;
+  return formatPriceRange({ min: lo, max: hi });
 }
 
 function applyMultipliers(

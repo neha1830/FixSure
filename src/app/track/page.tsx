@@ -97,14 +97,8 @@ function RepairCard({
               ₹{(repair.estimatedCharge ?? 0).toLocaleString("en-IN")}
               {repair.estimatedChargeMax != null &&
                 repair.estimatedChargeMax > (repair.estimatedCharge ?? 0) && (
-                  <>
-                    {" "}
-                    – ₹{repair.estimatedChargeMax.toLocaleString("en-IN")}
-                  </>
+                  <>–₹{repair.estimatedChargeMax.toLocaleString("en-IN")}</>
                 )}
-            </p>
-            <p className="mt-1 text-xs text-ink-soft/55">
-              Copy → original (all-in)
             </p>
           </div>
           <div className="rounded-xl bg-fog p-4">

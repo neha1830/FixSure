@@ -79,7 +79,10 @@ export function CatalogManager({ password }: Props) {
   }, [password]);
 
   useEffect(() => {
-    load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const filtered = useMemo(() => {

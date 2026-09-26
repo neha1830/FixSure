@@ -120,14 +120,15 @@ export function DeviceFixFlow() {
       },
       categories
     );
-    setCategoryId(next.categoryId);
-    setSeriesId(next.seriesId);
-    setModel(null);
-    setStep("models");
-    setResult(null);
-    if (params.get("issueCategory")) {
-      setIssueCategory(params.get("issueCategory")!);
-    }
+    const issue = params.get("issueCategory");
+    queueMicrotask(() => {
+      setCategoryId(next.categoryId);
+      setSeriesId(next.seriesId);
+      setModel(null);
+      setStep("models");
+      setResult(null);
+      if (issue) setIssueCategory(issue);
+    });
     // categories used for lookup only — do not reset when the live catalog hydrates
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
@@ -135,7 +136,8 @@ export function DeviceFixFlow() {
   useEffect(() => {
     const cat = getFixCategory(categoryId, categories);
     if (seriesId && cat.series.length && !cat.series.some((s) => s.id === seriesId)) {
-      setSeriesId(cat.series[0].id);
+      const fallback = cat.series[0].id;
+      queueMicrotask(() => setSeriesId(fallback));
     }
   }, [categories, categoryId, seriesId]);
 

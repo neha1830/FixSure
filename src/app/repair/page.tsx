@@ -87,18 +87,20 @@ function RepairForm() {
     );
     if (brandOk && storageOk && issueOk) return;
     const brand = brandOk ? form.brand : nextBrands[0] || "Other";
-    setForm((f) => ({
-      ...f,
-      brand,
-      model: brandOk ? f.model : "",
-      storage: storageOk
-        ? f.storage
-        : defaultStorageForDevice(f.deviceType),
-      issueCategory: issueOk
-        ? f.issueCategory
-        : defaultIssueForDevice(f.deviceType),
-      batteryHealth: isAppleBrand(brand) ? f.batteryHealth : "",
-    }));
+    queueMicrotask(() =>
+      setForm((f) => ({
+        ...f,
+        brand,
+        model: brandOk ? f.model : "",
+        storage: storageOk
+          ? f.storage
+          : defaultStorageForDevice(f.deviceType),
+        issueCategory: issueOk
+          ? f.issueCategory
+          : defaultIssueForDevice(f.deviceType),
+        batteryHealth: isAppleBrand(brand) ? f.batteryHealth : "",
+      }))
+    );
   }, [form.deviceType, form.brand, form.storage, form.issueCategory, catalog]);
 
   useEffect(() => {

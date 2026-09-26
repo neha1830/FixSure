@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { STATUS_LABELS, RepairStatus } from "@/lib/store-constants";
+import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 
 type Log = {
@@ -239,15 +240,14 @@ function TrackInner() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Transparency
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Track your repair
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Transparency"
+          title="Track your repair"
+          image="/images/banners/banner-track.png"
+          imageAlt="Watch showing live repair status"
+        >
           Enter the mobile number you used when submitting the repair request.
-        </p>
+        </PageBanner>
 
         <form
           onSubmit={onSubmit}

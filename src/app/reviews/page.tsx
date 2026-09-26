@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { PageBanner } from "@/components/PageBanner";
 
 type Review = {
   id: string;
@@ -65,16 +66,15 @@ export default function ReviewsPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Customer voices
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Reviews
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Customer voices"
+          title="Reviews"
+          image="/images/banners/banner-reviews.png"
+          imageAlt="A phone on a cafe table after a happy visit"
+        >
           Share your experience. New reviews appear on the site after we
           approve them.
-        </p>
+        </PageBanner>
 
         {done ? (
           <div className="mt-8 rounded-[1.5rem] border border-[var(--line)] bg-white p-6 shadow-[var(--shadow)]">

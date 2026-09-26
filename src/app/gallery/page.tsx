@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getStoreSettings } from "@/lib/store";
 import { getPublicGallery } from "@/lib/public-data";
+import { PageBanner } from "@/components/PageBanner";
 
 export async function generateMetadata() {
   const store = await getStoreSettings();
@@ -16,16 +17,15 @@ export default async function GalleryPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-6xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Real work
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Before &amp; after
-        </h1>
-        <p className="mt-3 max-w-2xl text-ink-soft/80">
+        <PageBanner
+          eyebrow="Real work"
+          title="Before & after"
+          image="/images/banners/banner-gallery.png"
+          imageAlt="Cracked phone beside a repaired phone"
+        >
           Every set below is published with the customer&apos;s written consent.
           We never share unlocked screens with personal photos or messages.
-        </p>
+        </PageBanner>
 
         {items.length === 0 ? (
           <div className="mt-12 rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-10 text-center">

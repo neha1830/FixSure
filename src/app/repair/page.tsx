@@ -4,14 +4,22 @@ import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  BATTERY_HEALTH_OPTIONS,
   ISSUE_CATEGORIES,
-  PHONE_BRANDS,
-  STORAGE_OPTIONS,
+  defaultIssueForDevice,
+  defaultStorageForDevice,
+  filterIssuesForDevice,
+  isAppleBrand,
+  issueAllowedForDevice,
+  storageOptionsForDevice,
 } from "@/lib/troubleshooting-constants";
 import { SERVICE_CATALOG } from "@/lib/catalog";
+import { brandsForDeviceType, repairModelsForDevice } from "@/lib/fix-catalog";
+import { useFixCatalog } from "@/lib/use-fix-catalog";
+import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 import { WipeChecklist } from "@/components/WipeChecklist";
-import { DeviceIcon } from "@/components/Icons";
+import { deviceIllustration } from "@/lib/illustrations";
 
 type Result = {
   trackingId: string;
@@ -33,6 +41,7 @@ type Result = {
 
 function RepairForm() {
   const params = useSearchParams();
+  const { categories: catalog } = useFixCatalog();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [warrantyDays, setWarrantyDays] = useState(90);
@@ -43,11 +52,10 @@ function RepairForm() {
       ? ISSUE_CATEGORIES
       : SERVICE_CATALOG.map((s) => ({ value: s.id, label: s.label }))
   );
-  const [brands, setBrands] = useState<string[]>([...PHONE_BRANDS]);
   const [devices, setDevices] = useState<{ id: string; label: string }[]>([
     { id: "phone", label: "Mobile Phone" },
     { id: "tablet", label: "Tablet" },
-    { id: "macbook", label: "MacBook / Laptop" },
+    { id: "macbook", label: "Laptop" },
     { id: "smartwatch", label: "Smartwatch" },
   ]);
   const [form, setForm] = useState({
@@ -57,15 +65,43 @@ function RepairForm() {
     deviceType: params.get("deviceType") || "phone",
     brand: params.get("brand") || "Apple",
     model: params.get("model") || "",
-    storage: params.get("storage") || "128GB",
+    storage:
+      params.get("storage") ||
+      defaultStorageForDevice(params.get("deviceType") || "phone"),
     batteryHealth: params.get("batteryHealth") || "",
-    color: "",
-    imei: "",
     issueCategory: params.get("issueCategory") || "screen",
     issueDescription: params.get("issueDescription") || "",
     troubleshootTried: params.get("troubleshootTried") === "1",
     privacyAck: false,
   });
+
+  useEffect(() => {
+    const nextBrands = brandsForDeviceType(form.deviceType, catalog);
+    const brandOk = nextBrands.includes(form.brand);
+    const storageOk = storageOptionsForDevice(form.deviceType).includes(
+      form.storage
+    );
+    const issueOk = issueAllowedForDevice(
+      form.issueCategory,
+      form.deviceType
+    );
+    if (brandOk && storageOk && issueOk) return;
+    const brand = brandOk ? form.brand : nextBrands[0] || "Other";
+    queueMicrotask(() =>
+      setForm((f) => ({
+        ...f,
+        brand,
+        model: brandOk ? f.model : "",
+        storage: storageOk
+          ? f.storage
+          : defaultStorageForDevice(f.deviceType),
+        issueCategory: issueOk
+          ? f.issueCategory
+          : defaultIssueForDevice(f.deviceType),
+        batteryHealth: isAppleBrand(brand) ? f.batteryHealth : "",
+      }))
+    );
+  }, [form.deviceType, form.brand, form.storage, form.issueCategory, catalog]);
 
   useEffect(() => {
     fetch("/api/content")
@@ -75,9 +111,6 @@ function RepairForm() {
         if (data.store?.requestValidDays)
           setRequestValidDays(data.store.requestValidDays);
         if (data.store?.name) setBrandName(data.store.name);
-        if (data.byType?.brand?.length) {
-          setBrands(data.byType.brand.map((b: { title: string }) => b.title));
-        }
         if (data.byType?.device?.length) {
           setDevices(
             data.byType.device.map(
@@ -137,6 +170,42 @@ function RepairForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  const deviceBrands = brandsForDeviceType(form.deviceType, catalog);
+  const modelOptions = (() => {
+    const models = repairModelsForDevice(form.deviceType, form.brand, catalog);
+    if (form.model && !models.includes(form.model)) {
+      return [form.model, ...models];
+    }
+    return models;
+  })();
+  const showBatteryHealth = isAppleBrand(form.brand);
+  const storageOptions = storageOptionsForDevice(form.deviceType);
+  const issueOptions = filterIssuesForDevice(categories, form.deviceType);
+
+  function applyDeviceType(deviceType: string) {
+    const nextBrands = brandsForDeviceType(deviceType, catalog);
+    const brand = nextBrands.includes(form.brand)
+      ? form.brand
+      : nextBrands[0] || "Other";
+    const models = repairModelsForDevice(deviceType, brand, catalog);
+    const model = models.includes(form.model) ? form.model : "";
+    const storage = storageOptionsForDevice(deviceType).includes(form.storage)
+      ? form.storage
+      : defaultStorageForDevice(deviceType);
+    const issueCategory = issueAllowedForDevice(form.issueCategory, deviceType)
+      ? form.issueCategory
+      : defaultIssueForDevice(deviceType);
+    setForm({
+      ...form,
+      deviceType,
+      brand,
+      model,
+      storage,
+      issueCategory,
+      batteryHealth: isAppleBrand(brand) ? form.batteryHealth : "",
+    });
   }
 
   if (result) {
@@ -246,24 +315,111 @@ function RepairForm() {
 
       <div>
         <p className="mb-3 text-sm font-semibold text-ink-soft">Device type</p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-4 gap-2">
           {devices.map((d) => (
             <button
               key={d.id}
               type="button"
-              onClick={() => setForm({ ...form, deviceType: d.id })}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm ${
+              onClick={() => applyDeviceType(d.id)}
+              className={`overflow-hidden rounded-xl border text-center transition ${
                 form.deviceType === d.id
-                  ? "border-teal bg-mint/40 font-semibold"
-                  : "border-[var(--line)]"
+                  ? "border-teal bg-mint/25 ring-2 ring-teal/15"
+                  : "border-[var(--line)] hover:border-teal/40"
               }`}
             >
-              <span className="icon-tile !h-9 !w-9 !rounded-lg">
-                <DeviceIcon deviceKey={d.id} size={18} />
-              </span>
-              {d.label}
+              <div className="relative aspect-[4/3] overflow-hidden bg-fog">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={deviceIllustration(d.id)}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <p className="px-1 py-1.5 text-[11px] font-semibold leading-tight sm:text-xs">
+                {d.label}
+              </p>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-4 text-sm font-semibold text-ink-soft">
+          Device details
+        </p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label className="field-label">Brand *</label>
+            <select
+              className="field"
+              value={form.brand}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  brand: e.target.value,
+                  model: "",
+                  batteryHealth: isAppleBrand(e.target.value)
+                    ? form.batteryHealth
+                    : "",
+                })
+              }
+            >
+              {deviceBrands.map((b) => (
+                <option key={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Model *</label>
+            <select
+              className="field"
+              required
+              value={form.model}
+              onChange={(e) => setForm({ ...form, model: e.target.value })}
+            >
+              <option value="" disabled>
+                Select model
+              </option>
+              {modelOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Storage</label>
+            <select
+              className="field"
+              value={form.storage}
+              onChange={(e) => setForm({ ...form, storage: e.target.value })}
+            >
+              {storageOptions.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          {showBatteryHealth && (
+            <div>
+              <label className="field-label">Battery health</label>
+              <select
+                className="field"
+                value={form.batteryHealth}
+                onChange={(e) =>
+                  setForm({ ...form, batteryHealth: e.target.value })
+                }
+              >
+                <option value="">Not sure</option>
+                {BATTERY_HEALTH_OPTIONS.filter((o) => o.value !== "unknown").map(
+                  (o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -302,73 +458,6 @@ function RepairForm() {
         </div>
       </div>
 
-      <div className="border-t border-[var(--line)] pt-5">
-        <p className="mb-4 text-sm font-semibold text-ink-soft">
-          Device details
-        </p>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label className="field-label">Brand *</label>
-            <select
-              className="field"
-              value={form.brand}
-              onChange={(e) => setForm({ ...form, brand: e.target.value })}
-            >
-              {brands.map((b) => (
-                <option key={b}>{b}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Model *</label>
-            <input
-              className="field"
-              required
-              value={form.model}
-              onChange={(e) => setForm({ ...form, model: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="field-label">Storage</label>
-            <select
-              className="field"
-              value={form.storage}
-              onChange={(e) => setForm({ ...form, storage: e.target.value })}
-            >
-              {STORAGE_OPTIONS.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Battery health %</label>
-            <input
-              className="field"
-              value={form.batteryHealth}
-              onChange={(e) =>
-                setForm({ ...form, batteryHealth: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <label className="field-label">Color</label>
-            <input
-              className="field"
-              value={form.color}
-              onChange={(e) => setForm({ ...form, color: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="field-label">IMEI (optional)</label>
-            <input
-              className="field"
-              value={form.imei}
-              onChange={(e) => setForm({ ...form, imei: e.target.value })}
-            />
-          </div>
-        </div>
-      </div>
-
       <div>
         <label className="field-label">Issue type *</label>
         <select
@@ -378,7 +467,7 @@ function RepairForm() {
             setForm({ ...form, issueCategory: e.target.value })
           }
         >
-          {categories.map((c) => (
+          {issueOptions.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
             </option>
@@ -449,19 +538,18 @@ export default function RepairPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Book a store visit
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Repair request
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Book a store visit"
+          title="Repair request"
+          image="/images/banners/banner-repair.png"
+          imageAlt="Phone being repaired on a clean bench"
+        >
           Tell us about your device so technicians can plan ahead. Then bring
           it to the store within the validity window.{" "}
           <Link href="/price" className="font-semibold text-teal">
             Check price first
           </Link>
-        </p>
+        </PageBanner>
         <div className="mt-10">
           <Suspense fallback={<p>Loading form…</p>}>
             <RepairForm />

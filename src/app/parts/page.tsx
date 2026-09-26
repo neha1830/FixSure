@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getStoreSettings } from "@/lib/store";
 import { getPublishedParts } from "@/lib/parts";
 import { PartsCatalogue } from "@/components/PartsCatalogue";
+import { PageBanner } from "@/components/PageBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +38,16 @@ export default async function PartsPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-6xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Parts only
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Buy spare parts
-        </h1>
-        <p className="mt-3 max-w-2xl text-ink-soft/80">
+        <PageBanner
+          eyebrow="Parts only"
+          title="Buy spare parts"
+          image="/images/banners/banner-parts.png"
+          imageAlt="Spare screen, battery, and tools"
+        >
           Screens, batteries, docks, and more for mobiles, tablets, laptops, and
           watches. Prices shown are for the part — ask in store for fitting if
           you need it installed.
-        </p>
+        </PageBanner>
 
         {parts.length === 0 ? (
           <p className="mt-12 text-ink-soft/70">

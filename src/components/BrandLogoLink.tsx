@@ -32,13 +32,13 @@ export function BrandLogoLink({
       href={href}
       title={title}
       aria-label={title}
-      className={`brand-logo-tile flex h-24 items-center justify-center rounded-2xl border border-[var(--line)] px-5 transition hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-[var(--shadow)] ${TILE_TINTS[index % TILE_TINTS.length]}`}
+      className={`brand-logo-tile flex h-28 items-center justify-center rounded-3xl border border-[var(--line)] px-5 transition hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-[var(--shadow)] ${TILE_TINTS[index % TILE_TINTS.length]}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={title}
-        className="max-h-10 max-w-[8rem] object-contain"
+        className="max-h-12 max-w-[9rem] object-contain"
         onError={() => setFailed(true)}
       />
     </a>

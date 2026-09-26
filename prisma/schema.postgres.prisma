@@ -212,3 +212,29 @@ model PartItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model CatalogSeries {
+  id         String   @id
+  categoryId String
+  label      String
+  brand      String
+  imageUrl   String
+  published  Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  models     CatalogModel[]
+}
+
+model CatalogModel {
+  id        String   @id
+  seriesId  String
+  label     String
+  details   String?
+  imageUrl  String
+  published Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  series    CatalogSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+}

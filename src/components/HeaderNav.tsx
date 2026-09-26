@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const primaryLinks = [
@@ -18,9 +19,28 @@ const moreLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
-function MoreMenu({ align = "right" }: { align?: "left" | "right" }) {
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function navLinkClass(active: boolean, extra = "") {
+  return `relative whitespace-nowrap transition-colors ${
+    active
+      ? "font-semibold text-teal"
+      : "hover:text-teal"
+  } ${extra}`;
+}
+
+function MoreMenu({
+  align = "right",
+  pathname,
+}: {
+  align?: "left" | "right";
+  pathname: string;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const childActive = moreLinks.some((l) => isActivePath(pathname, l.href));
 
   useEffect(() => {
     if (!open) return;
@@ -46,7 +66,7 @@ function MoreMenu({ align = "right" }: { align?: "left" | "right" }) {
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1 whitespace-nowrap transition-colors hover:text-teal ${
-          open ? "text-teal" : ""
+          open || childActive ? "font-semibold text-teal" : ""
         }`}
       >
         More
@@ -72,17 +92,23 @@ function MoreMenu({ align = "right" }: { align?: "left" | "right" }) {
             align === "left" ? "left-0" : "right-0"
           }`}
         >
-          {moreLinks.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              role="menuitem"
-              className="block px-3.5 py-2 text-sm text-ink-soft transition-colors hover:bg-mist hover:text-teal"
-              onClick={() => setOpen(false)}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {moreLinks.map((l) => {
+            const on = isActivePath(pathname, l.href);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                role="menuitem"
+                aria-current={on ? "page" : undefined}
+                className={`block px-3.5 py-2 text-sm transition-colors hover:bg-mist hover:text-teal ${
+                  on ? "bg-mint/40 font-semibold text-teal" : "text-ink-soft"
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -90,31 +116,48 @@ function MoreMenu({ align = "right" }: { align?: "left" | "right" }) {
 }
 
 export function HeaderNav({ variant }: { variant: "desktop" | "mobile" }) {
+  const pathname = usePathname() || "";
+
   if (variant === "desktop") {
     return (
       <nav className="flex items-center gap-6 text-sm font-medium text-ink-soft">
-        {primaryLinks.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className="transition-colors hover:text-teal"
-          >
-            {l.label}
-          </Link>
-        ))}
-        <MoreMenu />
+        {primaryLinks.map((l) => {
+          const on = isActivePath(pathname, l.href);
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              aria-current={on ? "page" : undefined}
+              className={navLinkClass(on)}
+            >
+              {l.label}
+              {on && (
+                <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded-full bg-teal" />
+              )}
+            </Link>
+          );
+        })}
+        <MoreMenu pathname={pathname} />
       </nav>
     );
   }
 
   return (
     <nav className="flex gap-4 overflow-x-auto border-t border-[var(--line)] px-5 py-2 text-sm font-medium text-ink-soft">
-      {primaryLinks.map((l) => (
-        <Link key={l.href} href={l.href} className="whitespace-nowrap">
-          {l.label}
-        </Link>
-      ))}
-      <MoreMenu align="left" />
+      {primaryLinks.map((l) => {
+        const on = isActivePath(pathname, l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            aria-current={on ? "page" : undefined}
+            className={navLinkClass(on)}
+          >
+            {l.label}
+          </Link>
+        );
+      })}
+      <MoreMenu align="left" pathname={pathname} />
     </nav>
   );
 }

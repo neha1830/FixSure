@@ -1,9 +1,15 @@
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { adminLoginLimited, resetAdminLoginLimit } from "./admin-rate-limit";
+import {
+  applyAdminSessionCookie,
+  readAdminSession,
+} from "./admin-session";
 import { prisma } from "./db";
 
-/** Bootstrap password used only when AdminSettings has never been created. */
-export const DEFAULT_ADMIN_PASSWORD = "fixsure-admin";
+function bootstrapPassword() {
+  return process.env.ADMIN_BOOTSTRAP_PASSWORD || "fixsure-admin";
+}
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -34,7 +40,7 @@ export async function ensureAdminPasswordSeeded(): Promise<void> {
         where: { id: "default" },
       });
       if (row?.passwordHash) return;
-      const passwordHash = hashPassword(DEFAULT_ADMIN_PASSWORD);
+      const passwordHash = hashPassword(bootstrapPassword());
       await prisma.adminSettings.upsert({
         where: { id: "default" },
         create: {
@@ -95,10 +101,25 @@ export async function changeAdminPassword(
 }
 
 export async function requireAdmin(req: NextRequest): Promise<boolean> {
-  const header = req.headers.get("x-admin-password");
-  const urlPass = req.nextUrl.searchParams.get("key");
-  const password = header || urlPass || "";
-  return verifyAdminPassword(password);
+  if (readAdminSession(req)) return true;
+
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  if (adminLoginLimited(ip)) return false;
+
+  const password = req.headers.get("x-admin-password") || "";
+  const ok = await verifyAdminPassword(password);
+  if (ok) resetAdminLoginLimit(ip);
+  return ok;
+}
+
+export function withAdminSession(req: NextRequest, res: NextResponse) {
+  if (!readAdminSession(req) && req.headers.get("x-admin-password")) {
+    applyAdminSessionCookie(res);
+  }
+  return res;
 }
 
 export function unauthorized() {

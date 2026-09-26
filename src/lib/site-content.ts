@@ -81,6 +81,13 @@ const SEED: SeedItem[] = [
   { type: "brand", key: "honor", title: "Honor", meta: { multiplier: 0.9 }, sortOrder: 13 },
   { type: "brand", key: "asus", title: "Asus", meta: { multiplier: 1 }, sortOrder: 14 },
   { type: "brand", key: "huawei", title: "Huawei", meta: { multiplier: 1.05 }, sortOrder: 15 },
+  { type: "brand", key: "sony", title: "Sony", meta: { multiplier: 1.1 }, sortOrder: 16 },
+  { type: "brand", key: "htc", title: "HTC", meta: { multiplier: 0.95 }, sortOrder: 17 },
+  { type: "brand", key: "lg", title: "LG", meta: { multiplier: 0.95 }, sortOrder: 18 },
+  { type: "brand", key: "tecno", title: "Tecno", meta: { multiplier: 0.75 }, sortOrder: 19 },
+  { type: "brand", key: "infinix", title: "Infinix", meta: { multiplier: 0.75 }, sortOrder: 20 },
+  { type: "brand", key: "lava", title: "Lava", meta: { multiplier: 0.7 }, sortOrder: 21 },
+  { type: "brand", key: "microsoft", title: "Microsoft", meta: { multiplier: 0.85 }, sortOrder: 22 },
 
   { type: "process", title: "Check price", body: "Pick your device and issue. Get a clear estimate with no hidden costs — locked for days when you book.", sortOrder: 0 },
   { type: "process", title: "Book a store visit", body: "Submit a repair request so our technicians can plan parts and time. Bring your device within the validity window shown on your request.", sortOrder: 1 },

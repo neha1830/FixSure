@@ -47,6 +47,11 @@ prisma/*.db-journal
 /src/generated
 
 
+# local audit / bake scratch
+.audit/
+.numba_cache/
+:memory:.ses
+
 # vercel
 .vercel
 

@@ -3,10 +3,17 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import {
+  BATTERY_HEALTH_OPTIONS,
+  BODY_CONDITION_OPTIONS,
   CONDITIONS,
-  PHONE_BRANDS,
+  SCREEN_CONDITION_OPTIONS,
   STORAGE_OPTIONS,
+  isAppleBrand,
 } from "@/lib/troubleshooting-constants";
+import { brandsForDeviceType, sellPhoneModelsForBrand } from "@/lib/fix-catalog";
+import { useFixCatalog } from "@/lib/use-fix-catalog";
+import { EstimateModal } from "@/components/EstimateModal";
+import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 
 type Result = {
@@ -23,6 +30,7 @@ type Result = {
 };
 
 export default function SellPage() {
+  const { categories } = useFixCatalog();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [form, setForm] = useState({
@@ -40,6 +48,8 @@ export default function SellPage() {
     bodyCondition: "",
     notes: "",
   });
+  const sellBrands = brandsForDeviceType("phone", categories);
+  const sellModels = sellPhoneModelsForBrand(form.brand, categories);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -63,57 +73,18 @@ export default function SellPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber">
-          Fair buyback
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Sell your phone
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Fair buyback"
+          title="Sell your phone"
+          image="/images/banners/banner-sell.png"
+          imageAlt="Phone ready for buyback"
+          accent="amber"
+        >
           Get an instant estimate online, then visit the store for a final
           offer after physical inspection.
-        </p>
+        </PageBanner>
 
-        {result ? (
-          <div className="mt-10 rounded-[1.5rem] border border-[var(--line)] bg-white p-8 shadow-[var(--shadow)]">
-            <p className="text-sm font-semibold uppercase tracking-wider text-amber">
-              Estimate ready
-            </p>
-            <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold">
-              ₹{result.estimatedPrice.toLocaleString("en-IN")}
-            </h2>
-            <p className="mt-1 text-sm text-ink-soft/70">
-              Inquiry ID: {result.inquiryId}
-            </p>
-            <p className="mt-4 text-sm text-ink-soft/80">{result.disclaimer}</p>
-            <PriceLockBadge
-              className="mt-4"
-              validUntil={result.estimateValidUntil}
-              amountLabel="sell estimate"
-            />
-            <div className="mt-6 rounded-xl bg-amber-soft/50 p-4 text-sm">
-              <p className="font-semibold">{result.store.name}</p>
-              <p className="mt-1">{result.store.address}</p>
-              <p className="mt-1">{result.store.hours}</p>
-              <p className="mt-1 font-semibold text-teal">
-                {result.store.phone}
-              </p>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/" className="btn-primary">
-                Done
-              </Link>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setResult(null)}
-              >
-                New estimate
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form
+        <form
             onSubmit={onSubmit}
             className="mt-10 space-y-5 rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-6 shadow-[var(--shadow)] sm:p-8"
           >
@@ -146,24 +117,40 @@ export default function SellPage() {
                   className="field"
                   value={form.brand}
                   onChange={(e) =>
-                    setForm({ ...form, brand: e.target.value })
+                    setForm({
+                      ...form,
+                      brand: e.target.value,
+                      model: "",
+                      batteryHealth: isAppleBrand(e.target.value)
+                        ? form.batteryHealth
+                        : "",
+                    })
                   }
                 >
-                  {PHONE_BRANDS.map((b) => (
+                  {sellBrands.map((b) => (
                     <option key={b}>{b}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="field-label">Model *</label>
-                <input
+                <select
                   className="field"
                   required
                   value={form.model}
                   onChange={(e) =>
                     setForm({ ...form, model: e.target.value })
                   }
-                />
+                >
+                  <option value="" disabled>
+                    Select model
+                  </option>
+                  {sellModels.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="field-label">Storage *</label>
@@ -195,37 +182,67 @@ export default function SellPage() {
                   ))}
                 </select>
               </div>
+              {isAppleBrand(form.brand) && (
+                <div>
+                  <label className="field-label">Battery health *</label>
+                  <select
+                    className="field"
+                    required
+                    value={form.batteryHealth}
+                    onChange={(e) =>
+                      setForm({ ...form, batteryHealth: e.target.value })
+                    }
+                  >
+                    <option value="" disabled>
+                      Select battery health
+                    </option>
+                    {BATTERY_HEALTH_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
-                <label className="field-label">Battery health %</label>
-                <input
+                <label className="field-label">Screen condition *</label>
+                <select
                   className="field"
-                  value={form.batteryHealth}
-                  onChange={(e) =>
-                    setForm({ ...form, batteryHealth: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="field-label">Screen condition</label>
-                <input
-                  className="field"
-                  placeholder="No cracks / minor scratches…"
+                  required
                   value={form.screenCondition}
                   onChange={(e) =>
                     setForm({ ...form, screenCondition: e.target.value })
                   }
-                />
+                >
+                  <option value="" disabled>
+                    Select screen condition
+                  </option>
+                  {SCREEN_CONDITION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="field-label">Body condition</label>
-                <input
+                <label className="field-label">Body condition *</label>
+                <select
                   className="field"
-                  placeholder="Dents, paint wear…"
+                  required
                   value={form.bodyCondition}
                   onChange={(e) =>
                     setForm({ ...form, bodyCondition: e.target.value })
                   }
-                />
+                >
+                  <option value="" disabled>
+                    Select body condition
+                  </option>
+                  {BODY_CONDITION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
@@ -261,8 +278,49 @@ export default function SellPage() {
             <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? "Calculating…" : "Get estimated price"}
             </button>
-          </form>
-        )}
+        </form>
+
+        <EstimateModal open={Boolean(result)} onClose={() => setResult(null)}>
+          {result && (
+            <>
+              <p className="pr-8 text-sm font-semibold uppercase tracking-wider text-amber">
+                Estimate ready
+              </p>
+              <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-bold">
+                ₹{result.estimatedPrice.toLocaleString("en-IN")}
+              </h2>
+              <p className="mt-1 text-sm text-ink-soft/70">
+                Inquiry ID: {result.inquiryId}
+              </p>
+              <p className="mt-4 text-sm text-ink-soft/80">{result.disclaimer}</p>
+              <PriceLockBadge
+                className="mt-4"
+                validUntil={result.estimateValidUntil}
+                amountLabel="sell estimate"
+              />
+              <div className="mt-6 rounded-xl bg-amber-soft/50 p-4 text-sm">
+                <p className="font-semibold">{result.store.name}</p>
+                <p className="mt-1">{result.store.address}</p>
+                <p className="mt-1">{result.store.hours}</p>
+                <p className="mt-1 font-semibold text-teal">
+                  {result.store.phone}
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/" className="btn-primary">
+                  Done
+                </Link>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setResult(null)}
+                >
+                  New estimate
+                </button>
+              </div>
+            </>
+          )}
+        </EstimateModal>
       </div>
     </div>
   );

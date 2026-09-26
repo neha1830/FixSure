@@ -6,6 +6,7 @@ import { ScenarioManager, Scenario } from "@/components/ScenarioManager";
 import { GalleryManager, GalleryItem } from "@/components/GalleryManager";
 import { ContentManager, ContentItem } from "@/components/ContentManager";
 import { PartsManager, PartItem } from "@/components/PartsManager";
+import { CatalogManager } from "@/components/CatalogManager";
 import {
   JobSheetForm,
   JobSheetPrint,
@@ -117,6 +118,7 @@ export default function AdminPage() {
     | "contacts"
     | "reviews"
     | "content"
+    | "catalog"
     | "parts"
     | "whatsapp"
     | "settings"
@@ -404,6 +406,7 @@ export default function AdminPage() {
               ["contacts", "Contact leads"],
               ["reviews", "Reviews"],
               ["content", "Website content"],
+              ["catalog", "Devices"],
               ["parts", "Parts shop"],
               ["scenarios", "Troubleshoot"],
               ["gallery", "Gallery"],
@@ -745,6 +748,10 @@ export default function AdminPage() {
             items={content}
             onChanged={() => load(password)}
           />
+        )}
+
+        {tab === "catalog" && (
+          <CatalogManager password={password} />
         )}
 
         {tab === "parts" && (

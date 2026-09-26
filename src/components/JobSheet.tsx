@@ -6,6 +6,7 @@ import {
   TECHNICIAN_OPTIONS,
 } from "@/lib/job-sheet-constants";
 import { DEVICE_TYPES, SERVICE_CATALOG } from "@/lib/catalog";
+import { filterIssuesForDevice } from "@/lib/troubleshooting-constants";
 import { formatEstimateDisplay } from "@/lib/pricing";
 import { STATUS_LABELS, type RepairStatus } from "@/lib/store-constants";
 
@@ -225,7 +226,18 @@ export function JobSheetForm({
           <select
             className="field"
             value={form.deviceType}
-            onChange={(e) => setForm({ ...form, deviceType: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                deviceType: e.target.value,
+                issueCategory: filterIssuesForDevice(
+                  SERVICE_CATALOG.map((s) => ({ value: s.id, label: s.label })),
+                  e.target.value
+                ).some((i) => i.value === form.issueCategory)
+                  ? form.issueCategory
+                  : "screen",
+              })
+            }
           >
             {DEVICE_TYPES.map((d) => (
               <option key={d.id} value={d.id}>
@@ -300,8 +312,11 @@ export function JobSheetForm({
               setForm({ ...form, issueCategory: e.target.value })
             }
           >
-            {SERVICE_CATALOG.map((s) => (
-              <option key={s.id} value={s.id}>
+            {filterIssuesForDevice(
+              SERVICE_CATALOG.map((s) => ({ value: s.id, label: s.label })),
+              form.deviceType
+            ).map((s) => (
+              <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}

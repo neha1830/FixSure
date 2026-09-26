@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WipeChecklist } from "@/components/WipeChecklist";
+import { PageBanner } from "@/components/PageBanner";
 import { PRIVACY_PLEDGES } from "@/lib/privacy";
 import { getStoreSettings } from "@/lib/store";
 
@@ -17,19 +18,20 @@ export default async function PrivacyPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Your data, your rules
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold sm:text-5xl">
-          Data privacy pledge
-        </h1>
-        <p className="mt-4 text-lg leading-relaxed text-ink-soft/80">
-          We repair hardware — we don&apos;t dig through your life. {store.name}{" "}
-          never accesses photos, messages, or apps without your explicit
-          permission. You do not need to sign out of accounts or factory-reset
-          your phone.
-        </p>
-        <p className="mt-3 text-ink-soft/75">{store.privacyBlurb}</p>
+        <PageBanner
+          eyebrow="Your data, your rules"
+          title="Data privacy pledge"
+          image="/images/banners/banner-privacy.png"
+          imageAlt="Phone wrapped in a soft glow of privacy"
+        >
+          <p>
+            We repair hardware — we don&apos;t dig through your life.{" "}
+            {store.name} never accesses photos, messages, or apps without your
+            explicit permission. You do not need to sign out of accounts or
+            factory-reset your phone.
+          </p>
+          <p className="mt-3">{store.privacyBlurb}</p>
+        </PageBanner>
 
         <section className="mt-10 rounded-[1.5rem] border border-[var(--line)] bg-white/90 p-6 sm:p-8">
           <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold">

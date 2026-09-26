@@ -4,6 +4,7 @@ import {
   requireAdmin,
   unauthorized,
 } from "@/lib/auth";
+import { clearAdminSessionCookie } from "@/lib/admin-session";
 
 export async function PUT(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();
@@ -28,9 +29,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       message: "Password updated. Use the new password next time you log in.",
     });
+    clearAdminSessionCookie(res);
+    return res;
   } catch (err) {
     console.error(err);
     return NextResponse.json(

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { PageBanner } from "@/components/PageBanner";
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
@@ -53,16 +54,15 @@ export default function ContactPage() {
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Get in touch
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold">
-          Contact us
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Get in touch"
+          title="Contact us"
+          image="/images/banners/banner-contact.png"
+          imageAlt="Bright store counter"
+        >
           Questions about repairs, warranty, or your visit? Send a note — we
           reply within 24 hours.
-        </p>
+        </PageBanner>
 
         <form
           onSubmit={onSubmit}

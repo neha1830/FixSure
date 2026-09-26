@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin, unauthorized } from "@/lib/auth";
+import { requireAdmin, unauthorized, withAdminSession } from "@/lib/auth";
 import {
   REPAIR_STATUSES,
   RepairStatus,
@@ -13,6 +13,7 @@ import { sendWhatsApp, getRepairTemplateSid } from "@/lib/whatsapp";
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();
+
 
   const repairs = await prisma.repairRequest.findMany({
     orderBy: { updatedAt: "desc" },
@@ -55,18 +56,24 @@ export async function GET(req: NextRequest) {
   await ensurePartsSeeded();
   const parts = await listAllParts();
 
-  return NextResponse.json({
-    repairs,
-    sells,
-    whatsapp,
-    store,
-    scenarios,
-    gallery,
-    contacts,
-    reviews,
-    content,
-    parts,
-  });
+  const { ensureCatalogSeeded } = await import("@/lib/catalog-store");
+  await ensureCatalogSeeded();
+
+  return withAdminSession(
+    req,
+    NextResponse.json({
+      repairs,
+      sells,
+      whatsapp,
+      store,
+      scenarios,
+      gallery,
+      contacts,
+      reviews,
+      content,
+      parts,
+    })
+  );
 }
 
 export async function PATCH(req: NextRequest) {

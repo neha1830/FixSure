@@ -15,7 +15,7 @@ export type ContentItem = {
 };
 
 const TYPE_HELP: Record<string, string> = {
-  device: "Device categories on home & price. Key: phone|tablet|macbook|smartwatch. Meta: {\"multiplier\":1.35}",
+  device: "Homepage device tabs only. Individual phones/laptops/iPads/watches + photos are edited under the Devices tab.",
   service: "Repair services + price range. Key: screen|battery|…. Meta: {\"basePriceMin\":1999,\"basePriceMax\":4499} → shows as ₹1,999–₹4,499 (includes labour)",
   brand: "Logo image only on home. Key: apple|samsung|…. Meta: {\"multiplier\":1.8,\"logoUrl\":\"/brands/apple.svg\"}",
   process: "3-step process section (title + body)",

@@ -4,6 +4,7 @@ export const CACHE_TAGS = {
   gallery: "gallery-public",
   reviews: "reviews-public",
   parts: "parts-public",
+  catalog: "catalog-public",
 } as const;
 
 export type CacheTagKey = keyof typeof CACHE_TAGS;

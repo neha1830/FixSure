@@ -113,11 +113,12 @@ body {
   width: 100%;
   border: 1.5px solid rgba(12, 31, 28, 0.12);
   background: white;
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  padding: 0.95rem 1.05rem;
   color: var(--ink);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 1rem;
 }
 
 .field:focus {
@@ -150,6 +151,38 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes fxFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Compact product stage — shorter so more cards fit per viewport */
+.product-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 5 / 4;
+  background: #f3f0f5;
+}
+
+.product-stage__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .product-stage__photo {
+  transform: scale(1.02);
 }
 
 @keyframes floaty {
@@ -199,8 +232,8 @@ body {
 
 .hero-scrim {
   background:
-    linear-gradient(105deg, rgba(12, 31, 28, 0.82) 0%, rgba(12, 31, 28, 0.55) 42%, rgba(12, 31, 28, 0.28) 70%, rgba(12, 31, 28, 0.18) 100%),
-    linear-gradient(0deg, rgba(12, 31, 28, 0.35), transparent 45%);
+    linear-gradient(105deg, rgba(12, 31, 28, 0.72) 0%, rgba(12, 31, 28, 0.48) 40%, rgba(12, 31, 28, 0.22) 68%, rgba(12, 31, 28, 0.12) 100%),
+    linear-gradient(0deg, rgba(12, 31, 28, 0.28), transparent 50%);
 }
 
 .section-photo {

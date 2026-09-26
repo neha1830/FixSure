@@ -287,6 +287,10 @@ export const ISSUE_CATEGORIES = DEFAULT_SCENARIOS.map((s) => ({
   label: s.label,
 }));
 
+export function isAppleBrand(brand: string | null | undefined) {
+  return (brand || "").trim().toLowerCase() === "apple";
+}
+
 export const PHONE_BRANDS = [
   "Apple",
   "Samsung",
@@ -304,6 +308,13 @@ export const PHONE_BRANDS = [
   "Honor",
   "Asus",
   "Huawei",
+  "Sony",
+  "HTC",
+  "LG",
+  "Tecno",
+  "Infinix",
+  "Lava",
+  "Microsoft",
   "Other",
 ] as const;
 
@@ -315,9 +326,132 @@ export const STORAGE_OPTIONS = [
   "1TB",
 ] as const;
 
+type DeviceFieldKind = "phone" | "tablet" | "laptop" | "watch";
+
+export function deviceFieldKind(deviceType: string | null | undefined): DeviceFieldKind {
+  const raw = (deviceType || "").toLowerCase();
+  if (raw.includes("watch")) return "watch";
+  if (raw === "macbook" || raw.includes("laptop")) return "laptop";
+  if (raw === "tablet" || raw === "ipad") return "tablet";
+  return "phone";
+}
+
+const STORAGE_BY_DEVICE: Record<DeviceFieldKind, readonly string[]> = {
+  phone: ["64GB", "128GB", "256GB", "512GB", "1TB"],
+  tablet: ["64GB", "128GB", "256GB", "512GB", "1TB", "2TB"],
+  laptop: ["256GB", "512GB", "1TB", "2TB"],
+  watch: ["8GB", "16GB", "32GB", "64GB"],
+};
+
+const DEFAULT_STORAGE_BY_DEVICE: Record<DeviceFieldKind, string> = {
+  phone: "128GB",
+  tablet: "128GB",
+  laptop: "512GB",
+  watch: "32GB",
+};
+
+const ISSUE_KEYS_BY_DEVICE: Record<DeviceFieldKind, readonly string[]> = {
+  phone: [
+    "screen",
+    "glass",
+    "backglass",
+    "battery",
+    "charging",
+    "camera",
+    "speaker",
+    "software",
+    "water",
+    "other",
+  ],
+  tablet: [
+    "screen",
+    "glass",
+    "battery",
+    "charging",
+    "camera",
+    "speaker",
+    "software",
+    "water",
+    "other",
+  ],
+  laptop: [
+    "screen",
+    "battery",
+    "charging",
+    "camera",
+    "speaker",
+    "software",
+    "water",
+    "other",
+  ],
+  watch: [
+    "screen",
+    "battery",
+    "charging",
+    "speaker",
+    "software",
+    "water",
+    "other",
+  ],
+};
+
+export function storageOptionsForDevice(deviceType: string | null | undefined) {
+  return [...STORAGE_BY_DEVICE[deviceFieldKind(deviceType)]];
+}
+
+export function defaultStorageForDevice(deviceType: string | null | undefined) {
+  return DEFAULT_STORAGE_BY_DEVICE[deviceFieldKind(deviceType)];
+}
+
+export function issueAllowedForDevice(
+  issueKey: string | null | undefined,
+  deviceType: string | null | undefined
+) {
+  const key = (issueKey || "").toLowerCase();
+  return ISSUE_KEYS_BY_DEVICE[deviceFieldKind(deviceType)].includes(key);
+}
+
+export function filterIssuesForDevice<
+  T extends { value?: string; key?: string | null; id?: string },
+>(issues: T[], deviceType: string | null | undefined): T[] {
+  return issues.filter((issue) =>
+    issueAllowedForDevice(issue.value || issue.key || issue.id, deviceType)
+  );
+}
+
+export function defaultIssueForDevice(deviceType: string | null | undefined) {
+  return ISSUE_KEYS_BY_DEVICE[deviceFieldKind(deviceType)][0] || "other";
+}
+
 export const CONDITIONS = [
   { value: "excellent", label: "Excellent — like new" },
   { value: "good", label: "Good — light wear" },
   { value: "fair", label: "Fair — visible scratches / minor issues" },
   { value: "poor", label: "Poor — cracks or heavy wear" },
+] as const;
+
+/** Stored values stay numeric so sell pricing can parse battery health. */
+export const BATTERY_HEALTH_OPTIONS = [
+  { value: "95", label: "90–100% — excellent" },
+  { value: "85", label: "80–89% — good" },
+  { value: "75", label: "70–79% — fair" },
+  { value: "60", label: "Below 70% — poor" },
+  { value: "unknown", label: "Not sure" },
+] as const;
+
+export const SCREEN_CONDITION_OPTIONS = [
+  { value: "perfect", label: "Perfect — no scratches" },
+  { value: "light-scratches", label: "Light scratches (not visible when on)" },
+  { value: "visible-scratches", label: "Visible scratches" },
+  { value: "cracked", label: "Cracked glass / lines" },
+  { value: "display-issue", label: "Dead pixels / burn-in / flicker" },
+  { value: "not-working", label: "Not working / black screen" },
+] as const;
+
+export const BODY_CONDITION_OPTIONS = [
+  { value: "like-new", label: "Like new — no marks" },
+  { value: "light-wear", label: "Light scuffs / wear" },
+  { value: "dents", label: "Visible dents or chips" },
+  { value: "heavy", label: "Heavy damage or bent frame" },
+  { value: "back-cracked", label: "Back glass cracked" },
 ] as const;

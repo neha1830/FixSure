@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import {
+  PART_CATEGORY_IMAGES,
   PART_DEVICE_CATEGORIES,
   PART_QUALITIES,
 } from "@/lib/parts-constants";
@@ -401,15 +402,10 @@ export function PartsManager({ password, parts, onChanged }: Props) {
               <img
                 src={
                   p.imageUrl ||
-                  (p.deviceCategory === "phone"
-                    ? "/parts/phone.svg"
-                    : p.deviceCategory === "tablet"
-                      ? "/parts/tablet.svg"
-                      : p.deviceCategory === "macbook"
-                        ? "/parts/laptop.svg"
-                        : p.deviceCategory === "smartwatch"
-                          ? "/parts/watch.svg"
-                          : "/parts/other.svg")
+                  PART_CATEGORY_IMAGES[
+                    p.deviceCategory as keyof typeof PART_CATEGORY_IMAGES
+                  ] ||
+                  PART_CATEGORY_IMAGES.other
                 }
                 alt=""
                 className="h-16 w-24 rounded-lg object-cover bg-[#E8F4F2]"

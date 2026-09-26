@@ -3,11 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  BATTERY_HEALTH_OPTIONS,
   ISSUE_CATEGORIES,
-  PHONE_BRANDS,
   STORAGE_OPTIONS,
   TroubleshootStep,
+  isAppleBrand,
 } from "@/lib/troubleshooting-constants";
+import { brandsForDeviceType, sellPhoneModelsForBrand } from "@/lib/fix-catalog";
+import { useFixCatalog } from "@/lib/use-fix-catalog";
+import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 import { getEstimateValidUntil } from "@/lib/pricing";
 
@@ -21,6 +25,7 @@ type StoreInfo = {
 type Category = { value: string; label: string };
 
 export default function TroubleshootPage() {
+  const { categories: catalog } = useFixCatalog();
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<TroubleshootStep[] | null>(null);
   const [estimateMin, setEstimateMin] = useState<number | null>(null);
@@ -92,19 +97,21 @@ export default function TroubleshootPage() {
     troubleshootTried: "1",
   }).toString();
 
+  const phoneBrands = brandsForDeviceType("phone", catalog);
+  const phoneModels = sellPhoneModelsForBrand(form.brand, catalog);
+
   return (
     <div className="atmosphere min-h-screen px-5 py-12">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal">
-          Free first
-        </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-bold text-ink sm:text-5xl">
-          Troubleshoot your phone
-        </h1>
-        <p className="mt-3 text-ink-soft/80">
+        <PageBanner
+          eyebrow="Free first"
+          title="Troubleshoot your phone"
+          image="/images/banners/banner-troubleshoot.png"
+          imageAlt="Phone and tools for DIY troubleshooting"
+        >
           Tell us about the device and issue. We&apos;ll give practical steps —
           if it still fails, book a repair with an estimate and store details.
-        </p>
+        </PageBanner>
 
         {!steps ? (
           <form
@@ -118,11 +125,18 @@ export default function TroubleshootPage() {
                   className="field"
                   value={form.brand}
                   onChange={(e) =>
-                    setForm({ ...form, brand: e.target.value })
+                    setForm({
+                      ...form,
+                      brand: e.target.value,
+                      model: "",
+                      batteryHealth: isAppleBrand(e.target.value)
+                        ? form.batteryHealth
+                        : "",
+                    })
                   }
                   required
                 >
-                  {PHONE_BRANDS.map((b) => (
+                  {phoneBrands.map((b) => (
                     <option key={b} value={b}>
                       {b}
                     </option>
@@ -131,15 +145,23 @@ export default function TroubleshootPage() {
               </div>
               <div>
                 <label className="field-label">Model *</label>
-                <input
+                <select
                   className="field"
-                  placeholder="e.g. iPhone 13, Galaxy S22"
+                  required
                   value={form.model}
                   onChange={(e) =>
                     setForm({ ...form, model: e.target.value })
                   }
-                  required
-                />
+                >
+                  <option value="" disabled>
+                    Select model
+                  </option>
+                  {phoneModels.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="field-label">Storage</label>
@@ -157,20 +179,27 @@ export default function TroubleshootPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="field-label">Battery health (%)</label>
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  max={100}
-                  placeholder="e.g. 84"
-                  value={form.batteryHealth}
-                  onChange={(e) =>
-                    setForm({ ...form, batteryHealth: e.target.value })
-                  }
-                />
-              </div>
+              {isAppleBrand(form.brand) && (
+                <div>
+                  <label className="field-label">Battery health</label>
+                  <select
+                    className="field"
+                    value={form.batteryHealth}
+                    onChange={(e) =>
+                      setForm({ ...form, batteryHealth: e.target.value })
+                    }
+                  >
+                    <option value="">Not sure</option>
+                    {BATTERY_HEALTH_OPTIONS.filter(
+                      (o) => o.value !== "unknown"
+                    ).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div>
               <label className="field-label">Issue type *</label>

@@ -7,6 +7,7 @@ const PATHS_BY_TAG: Record<CacheTagKey, string[]> = {
   gallery: ["/", "/gallery"],
   reviews: ["/", "/reviews"],
   parts: ["/", "/parts"],
+  catalog: ["/", "/price", "/repair", "/sell", "/troubleshoot"],
 };
 
 /** Invalidate marketing/public caches after admin writes. Server-only. */

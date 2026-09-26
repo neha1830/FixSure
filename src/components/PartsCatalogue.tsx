@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  PART_CATEGORY_IMAGES,
   PART_DEVICE_CATEGORIES,
   PART_QUALITIES,
 } from "@/lib/parts-constants";
@@ -28,13 +29,7 @@ type Props = {
   storeAddress: string;
 };
 
-const CATEGORY_FALLBACK: Record<string, string> = {
-  phone: "/parts/phone.svg",
-  tablet: "/parts/tablet.svg",
-  macbook: "/parts/laptop.svg",
-  smartwatch: "/parts/watch.svg",
-  other: "/parts/other.svg",
-};
+const CATEGORY_FALLBACK: Record<string, string> = PART_CATEGORY_IMAGES;
 
 function qualityLabel(key: string) {
   return PART_QUALITIES.find((q) => q.key === key)?.label || key;
@@ -188,8 +183,8 @@ export function PartsCatalogue({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={src}
-                  alt=""
-                  className="aspect-[16/10] w-full bg-[#E8F4F2] object-cover"
+                  alt={p.title}
+                  className="aspect-[4/3] w-full bg-[#E8F4F2] object-cover"
                 />
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex flex-wrap gap-2 text-xs font-semibold">

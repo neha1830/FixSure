@@ -38,11 +38,6 @@ function defaultImageFor(category: string) {
   );
 }
 
-function isPlaceholderImage(url: string | null | undefined) {
-  if (!url) return true;
-  return url.startsWith("/parts/") && url.endsWith(".svg");
-}
-
 const PART_SEEDS: Array<{
   title: string;
   description: string;
@@ -480,28 +475,8 @@ export async function ensurePartsSeeded(): Promise<void> {
     seedPromise = (async () => {
       try {
         const count = await prisma.partItem.count();
-        if (count > 0) {
-          // Only backfill missing placeholder images when the table already has rows.
-          const missingImages = await prisma.partItem.findMany({
-            where: {
-              OR: [
-                { imageUrl: null },
-                { imageUrl: "" },
-                { imageUrl: { startsWith: "/parts/" } },
-              ],
-            },
-            select: { id: true, deviceCategory: true, imageUrl: true },
-            take: 40,
-          });
-          for (const row of missingImages) {
-            if (!isPlaceholderImage(row.imageUrl)) continue;
-            await prisma.partItem.update({
-              where: { id: row.id },
-              data: { imageUrl: defaultImageFor(row.deviceCategory) },
-            });
-          }
-          return;
-        }
+        // Already seeded — do not run image backfills on every admin/public request.
+        if (count > 0) return;
 
         for (const p of PART_SEEDS) {
           const imageUrl = p.imageUrl || defaultImageFor(p.deviceCategory);

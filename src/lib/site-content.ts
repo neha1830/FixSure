@@ -8,7 +8,6 @@ import {
   type PricingContext,
   type PriceRange,
 } from "./pricing";
-import { revalidatePublicSite } from "./revalidate-public";
 
 export { parseMeta };
 export type { PricingContext, PriceRange };
@@ -142,7 +141,7 @@ export async function ensureContentSeeded(): Promise<void> {
         });
         return;
       }
-      await migrateServicePriceRanges();
+      // Price-range migration is one-shot; skip on every request once content exists.
     })().catch((err) => {
       seedPromise = null;
       throw err;
@@ -216,47 +215,6 @@ function readServicePriceRange(
   }
 
   return null;
-}
-
-/** Upgrade service rows that still only have a single basePrice. */
-async function migrateServicePriceRanges(): Promise<void> {
-  const services = await prisma.contentItem.findMany({
-    where: { type: "service" },
-  });
-  let changed = false;
-  for (const s of services) {
-    const meta = parseMeta(s.meta);
-    const hasMin = meta.basePriceMin != null || meta.priceCopy != null;
-    const hasMax = meta.basePriceMax != null || meta.priceOriginal != null;
-    if (hasMin && hasMax) {
-      const min = Number(meta.basePriceMin ?? meta.priceCopy);
-      const max = Number(meta.basePriceMax ?? meta.priceOriginal);
-      if (!Number.isNaN(min) && !Number.isNaN(max) && min !== max) continue;
-    }
-    const key = (s.key || "").toLowerCase();
-    const range =
-      SERVICE_BASE_RANGES[key] ||
-      readServicePriceRange(meta, key) ||
-      SERVICE_BASE_RANGES.other;
-    const nextMeta: Record<string, unknown> = {
-      ...meta,
-      basePriceMin: range.min,
-      basePriceMax: range.max,
-    };
-    delete nextMeta.basePrice;
-    await prisma.contentItem.update({
-      where: { id: s.id },
-      data: { meta: JSON.stringify(nextMeta) },
-    });
-    changed = true;
-  }
-  if (changed) {
-    try {
-      revalidatePublicSite("content");
-    } catch {
-      /* ignore if called outside request */
-    }
-  }
 }
 
 export async function getPricingContext(): Promise<PricingContext> {

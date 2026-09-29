@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import {
+  normalizePhoneDigits,
+  optionalEmailValidationError,
+  optionalPhoneValidationError,
+} from "@/lib/contact-validation";
 
 export async function POST(req: Request) {
   try {
@@ -20,11 +25,22 @@ export async function POST(req: Request) {
       );
     }
 
+    const emailErr = optionalEmailValidationError(email);
+    if (emailErr) {
+      return NextResponse.json({ error: emailErr }, { status: 400 });
+    }
+    const phoneErr = optionalPhoneValidationError(phoneNumber);
+    if (phoneErr) {
+      return NextResponse.json({ error: phoneErr }, { status: 400 });
+    }
+
     await prisma.contactInquiry.create({
       data: {
         name: String(name).trim(),
         email: email ? String(email).trim() : null,
-        phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+        phoneNumber: phoneNumber
+          ? normalizePhoneDigits(String(phoneNumber))
+          : null,
         message: String(message).trim(),
         status: "NEW",
       },

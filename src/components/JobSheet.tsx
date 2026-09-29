@@ -1,14 +1,15 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import {
-  DEFAULT_PRE_CHECKLIST,
-  TECHNICIAN_OPTIONS,
-} from "@/lib/job-sheet-constants";
+import { DEFAULT_PRE_CHECKLIST } from "@/lib/job-sheet-constants";
 import { DEVICE_TYPES, SERVICE_CATALOG } from "@/lib/catalog";
 import { filterIssuesForDevice } from "@/lib/troubleshooting-constants";
 import { formatEstimateDisplay } from "@/lib/pricing";
 import { STATUS_LABELS, type RepairStatus } from "@/lib/store-constants";
+import {
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+} from "@/lib/contact-validation";
 
 export type JobSheetRepair = {
   id: string;
@@ -38,14 +39,17 @@ export type JobSheetRepair = {
 };
 
 type Props = {
-  password: string;
+  authHeaders: Record<string, string>;
   storeName: string;
   storePhone: string;
   storeAddress: string;
+  technicians?: { id: string; name: string }[];
   onCreated: () => Promise<void> | void;
   onCancel: () => void;
   initial?: JobSheetRepair | null;
 };
+
+type PartLine = { name: string; qty: number };
 
 function parseCheckedKeys(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -60,6 +64,45 @@ function parseCheckedKeys(raw: string | null | undefined): string[] {
   return [];
 }
 
+function parsePartsUsed(raw: string | null | undefined): PartLine[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((p) => ({
+          name: String(p?.name || "").trim(),
+          qty: Math.max(1, Number(p?.qty) || 1),
+        }))
+        .filter((p) => p.name);
+    }
+  } catch {
+    /* legacy free text — one part per line or comma */
+  }
+  return raw
+    .split(/[\n,]+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const m = line.match(/^(.*?)\s*[x×]\s*(\d+)\s*$/i);
+      if (m) return { name: m[1].trim(), qty: Math.max(1, Number(m[2]) || 1) };
+      return { name: line, qty: 1 };
+    });
+}
+
+function serializePartsUsed(parts: PartLine[]): string {
+  const clean = parts
+    .map((p) => ({ name: p.name.trim(), qty: Math.max(1, p.qty || 1) }))
+    .filter((p) => p.name);
+  return clean.length ? JSON.stringify(clean) : "";
+}
+
+function formatPartsUsed(raw: string | null | undefined): string {
+  const parts = parsePartsUsed(raw);
+  if (!parts.length) return "—";
+  return parts.map((p) => `${p.name} ×${p.qty}`).join(", ");
+}
+
 const emptyForm = {
   customerName: "",
   phoneNumber: "",
@@ -67,22 +110,21 @@ const emptyForm = {
   deviceType: "phone",
   brand: "",
   model: "",
-  serialNumber: "",
   imei: "",
   devicePasscode: "",
-  technicianName: TECHNICIAN_OPTIONS[0],
+  technicianName: "",
   dueDate: "",
   issueCategory: "screen",
   issueDescription: "",
   estimatedCharge: "",
   estimatedChargeMax: "",
-  partsUsed: "",
   adminNotes: "",
   sendWhatsApp: true,
 };
 
 export function JobSheetForm({
-  password,
+  authHeaders,
+  technicians = [],
   onCreated,
   onCancel,
   initial,
@@ -92,6 +134,11 @@ export function JobSheetForm({
   const [checked, setChecked] = useState<string[]>(() =>
     parseCheckedKeys(initial?.preChecklist)
   );
+  const [parts, setParts] = useState<PartLine[]>(() =>
+    parsePartsUsed(initial?.partsUsed)
+  );
+  const [partDraft, setPartDraft] = useState("");
+  const [partQty, setPartQty] = useState(1);
   const [form, setForm] = useState(() =>
     initial
       ? {
@@ -101,10 +148,9 @@ export function JobSheetForm({
           deviceType: initial.deviceType || "phone",
           brand: initial.brand,
           model: initial.model,
-          serialNumber: initial.serialNumber || "",
           imei: initial.imei || "",
           devicePasscode: initial.devicePasscode || "",
-          technicianName: initial.technicianName || TECHNICIAN_OPTIONS[0],
+          technicianName: initial.technicianName || "",
           dueDate: initial.dueDate || "",
           issueCategory: initial.issueCategory || "screen",
           issueDescription: initial.issueDescription,
@@ -116,7 +162,6 @@ export function JobSheetForm({
             initial.estimatedChargeMax != null
               ? String(initial.estimatedChargeMax)
               : "",
-          partsUsed: initial.partsUsed || "",
           adminNotes: initial.adminNotes || "",
           sendWhatsApp: false,
         }
@@ -135,7 +180,6 @@ export function JobSheetForm({
         deviceType: form.deviceType,
         brand: form.brand,
         model: form.model,
-        serialNumber: form.serialNumber,
         imei: form.imei,
         devicePasscode: form.devicePasscode,
         technicianName: form.technicianName,
@@ -144,7 +188,7 @@ export function JobSheetForm({
         issueDescription: form.issueDescription,
         estimatedCharge: form.estimatedCharge,
         estimatedChargeMax: form.estimatedChargeMax,
-        partsUsed: form.partsUsed,
+        partsUsed: serializePartsUsed(parts),
         adminNotes: form.adminNotes,
         preChecklist: checked,
         sendWhatsApp: form.sendWhatsApp,
@@ -155,7 +199,7 @@ export function JobSheetForm({
         method: isEdit ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
+          ...authHeaders,
         },
         body: JSON.stringify(payload),
       });
@@ -167,6 +211,27 @@ export function JobSheetForm({
     } finally {
       setSaving(false);
     }
+  }
+
+  function addPart() {
+    const name = partDraft.trim();
+    if (!name) return;
+    setParts((prev) => {
+      const idx = prev.findIndex(
+        (p) => p.name.toLowerCase() === name.toLowerCase()
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          qty: Math.min(20, next[idx].qty + partQty),
+        };
+        return next;
+      }
+      return [...prev, { name, qty: partQty }];
+    });
+    setPartDraft("");
+    setPartQty(1);
   }
 
   return (
@@ -196,7 +261,12 @@ export function JobSheetForm({
           <label className="field-label">Phone *</label>
           <input
             className="field"
+            type="tel"
+            inputMode="numeric"
             required
+            pattern={PHONE_INPUT_PATTERN}
+            title={PHONE_INPUT_TITLE}
+            placeholder="10-digit mobile"
             value={form.phoneNumber}
             onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
           />
@@ -247,14 +317,6 @@ export function JobSheetForm({
           </select>
         </div>
         <div>
-          <label className="field-label">Serial number</label>
-          <input
-            className="field"
-            value={form.serialNumber}
-            onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
-          />
-        </div>
-        <div>
           <label className="field-label">IMEI</label>
           <input
             className="field"
@@ -274,25 +336,37 @@ export function JobSheetForm({
         </div>
         <div>
           <label className="field-label">Technician</label>
-          <select
-            className="field"
-            value={form.technicianName}
-            onChange={(e) =>
-              setForm({ ...form, technicianName: e.target.value })
-            }
-          >
-            {TECHNICIAN_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-            {form.technicianName &&
-              !TECHNICIAN_OPTIONS.includes(
-                form.technicianName as (typeof TECHNICIAN_OPTIONS)[number]
-              ) && (
-                <option value={form.technicianName}>{form.technicianName}</option>
-              )}
-          </select>
+          {technicians.length > 0 ? (
+            <select
+              className="field"
+              value={form.technicianName}
+              onChange={(e) =>
+                setForm({ ...form, technicianName: e.target.value })
+              }
+            >
+              <option value="">Select technician</option>
+              {technicians.map((t) => (
+                <option key={t.id} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
+              {form.technicianName &&
+                !technicians.some((t) => t.name === form.technicianName) && (
+                  <option value={form.technicianName}>
+                    {form.technicianName} (saved)
+                  </option>
+                )}
+            </select>
+          ) : (
+            <input
+              className="field"
+              placeholder="Add technicians under Technicians tab"
+              value={form.technicianName}
+              onChange={(e) =>
+                setForm({ ...form, technicianName: e.target.value })
+              }
+            />
+          )}
         </div>
         <div>
           <label className="field-label">Due date</label>
@@ -361,12 +435,82 @@ export function JobSheetForm({
         </div>
         <div className="sm:col-span-2">
           <label className="field-label">Parts used</label>
-          <textarea
-            className="field min-h-[64px]"
-            placeholder="e.g. Copy display ×1, battery ×1"
-            value={form.partsUsed}
-            onChange={(e) => setForm({ ...form, partsUsed: e.target.value })}
-          />
+          <div className="mt-1 flex flex-wrap items-end gap-2">
+            <div className="min-w-[12rem] flex-1">
+              <input
+                className="field"
+                placeholder="Part name (e.g. Battery)"
+                value={partDraft}
+                onChange={(e) => setPartDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addPart();
+                  }
+                }}
+              />
+            </div>
+            <select
+              className="field !w-20"
+              value={partQty}
+              onChange={(e) => setPartQty(Number(e.target.value) || 1)}
+              aria-label="Quantity"
+            >
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  ×{n}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-secondary !py-2.5 text-sm"
+              onClick={addPart}
+            >
+              Add
+            </button>
+          </div>
+          {parts.length > 0 && (
+            <ul className="mt-2 divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-mist/40">
+              {parts.map((p, i) => (
+                <li
+                  key={`${p.name}-${i}`}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm"
+                >
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {p.name}
+                  </span>
+                  <select
+                    className="rounded-md border border-[var(--line)] bg-white px-1.5 py-0.5 text-xs"
+                    value={p.qty}
+                    onChange={(e) => {
+                      const qty = Number(e.target.value) || 1;
+                      setParts((prev) =>
+                        prev.map((row, idx) =>
+                          idx === i ? { ...row, qty } : row
+                        )
+                      );
+                    }}
+                  >
+                    {Array.from({ length: 20 }, (_, n) => n + 1).map((n) => (
+                      <option key={n} value={n}>
+                        ×{n}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-ink-soft/60 hover:text-amber"
+                    onClick={() =>
+                      setParts((prev) => prev.filter((_, idx) => idx !== i))
+                    }
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -503,7 +647,6 @@ export function JobSheetPrint({
             <Field label="Phone" value={repair.phoneNumber} />
             <Field label="Brand" value={repair.brand} />
             <Field label="Device" value={repair.model} />
-            <Field label="Serial" value={repair.serialNumber || "—"} />
             <Field label="IMEI" value={repair.imei || "—"} />
             <Field
               label="Pattern / password"
@@ -535,7 +678,7 @@ export function JobSheetPrint({
               Parts used
             </p>
             <p className="mt-1 text-sm whitespace-pre-wrap">
-              {repair.partsUsed || "—"}
+              {formatPartsUsed(repair.partsUsed)}
             </p>
           </div>
 

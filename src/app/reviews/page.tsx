@@ -3,6 +3,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { PageBanner } from "@/components/PageBanner";
+import {
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+} from "@/lib/contact-validation";
 
 type Review = {
   id: string;
@@ -118,6 +122,11 @@ export default function ReviewsPage() {
                 <label className="field-label">Phone (optional)</label>
                 <input
                   className="field"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern={PHONE_INPUT_PATTERN}
+                  title={PHONE_INPUT_TITLE}
+                  placeholder="10-digit mobile"
                   value={form.phoneNumber}
                   onChange={(e) =>
                     setForm({ ...form, phoneNumber: e.target.value })

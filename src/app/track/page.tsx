@@ -5,6 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { STATUS_LABELS, RepairStatus } from "@/lib/store-constants";
 import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
+import {
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+  isValidPhone,
+} from "@/lib/contact-validation";
 
 type Log = {
   id: string;
@@ -230,7 +235,11 @@ function TrackInner() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (phone.trim()) lookup(phone);
+    if (!isValidPhone(phone)) {
+      setError("Enter a valid 10-digit Indian mobile number.");
+      return;
+    }
+    lookup(phone);
   }
 
   const selected =
@@ -257,6 +266,9 @@ function TrackInner() {
             className="field flex-1"
             type="tel"
             inputMode="numeric"
+            required
+            pattern={PHONE_INPUT_PATTERN}
+            title={PHONE_INPUT_TITLE}
             placeholder="10-digit mobile number"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/[^\d+\s-]/g, ""))}

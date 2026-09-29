@@ -25,7 +25,7 @@ export type CatalogSeriesRow = {
 };
 
 type Props = {
-  password: string;
+  authHeaders: Record<string, string>;
 };
 
 const emptySeries = {
@@ -46,7 +46,7 @@ const emptyModel = {
   sortOrder: "0",
 };
 
-export function CatalogManager({ password }: Props) {
+export function CatalogManager({ authHeaders }: Props) {
   const [series, setSeries] = useState<CatalogSeriesRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,7 +66,7 @@ export function CatalogManager({ password }: Props) {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/catalog", {
-        headers: { "x-admin-password": password },
+        headers: { ...authHeaders },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load catalog");
@@ -76,7 +76,7 @@ export function CatalogManager({ password }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [password]);
+  }, [authHeaders]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -127,7 +127,7 @@ export function CatalogManager({ password }: Props) {
       if (seriesFile) fd.set("image", seriesFile);
       const res = await fetch("/api/admin/catalog", {
         method: editSeriesId ? "PUT" : "POST",
-        headers: { "x-admin-password": password },
+        headers: { ...authHeaders },
         body: fd,
       });
       const data = await res.json();
@@ -159,7 +159,7 @@ export function CatalogManager({ password }: Props) {
       if (modelFile) fd.set("image", modelFile);
       const res = await fetch("/api/admin/catalog", {
         method: editModelId ? "PUT" : "POST",
-        headers: { "x-admin-password": password },
+        headers: { ...authHeaders },
         body: fd,
       });
       const data = await res.json();
@@ -208,7 +208,7 @@ export function CatalogManager({ password }: Props) {
     if (!confirm(`Delete “${label}”?${extra}`)) return;
     const res = await fetch(
       `/api/admin/catalog?entity=${entity}&id=${encodeURIComponent(id)}`,
-      { method: "DELETE", headers: { "x-admin-password": password } }
+      { method: "DELETE", headers: { ...authHeaders } }
     );
     if (!res.ok) {
       alert("Could not delete");

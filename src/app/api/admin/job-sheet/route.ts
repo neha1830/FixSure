@@ -6,6 +6,11 @@ import { estimateRepairCharge } from "@/lib/pricing-server";
 import { getEstimateValidUntil } from "@/lib/pricing";
 import { getStoreSettings } from "@/lib/store";
 import { sendWhatsApp } from "@/lib/whatsapp";
+import {
+  normalizePhoneDigits,
+  optionalEmailValidationError,
+  phoneValidationError,
+} from "@/lib/contact-validation";
 
 const trackingId = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
 
@@ -47,6 +52,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const phoneErr = phoneValidationError(phoneNumber);
+    if (phoneErr) {
+      return NextResponse.json({ error: phoneErr }, { status: 400 });
+    }
+    const emailErr = optionalEmailValidationError(body.email);
+    if (emailErr) {
+      return NextResponse.json({ error: emailErr }, { status: 400 });
+    }
+    const normalizedPhone = normalizePhoneDigits(phoneNumber);
+
     const deviceType = String(body.deviceType || "phone");
     let estimatedCharge = parseOptionalNumber(body.estimatedCharge);
     let estimatedChargeMax = parseOptionalNumber(body.estimatedChargeMax);
@@ -72,7 +87,7 @@ export async function POST(req: NextRequest) {
       data: {
         trackingId: tid,
         customerName,
-        phoneNumber,
+        phoneNumber: normalizedPhone,
         email: body.email?.trim() || null,
         deviceType,
         serviceMode: "STORE",
@@ -111,7 +126,7 @@ export async function POST(req: NextRequest) {
       const trackHint = `Track status with your mobile number at ${store.name}.`;
       const message = `Hi ${customerName}, job sheet ${tid} created for your ${brand} ${model}. Estimate ₹${Number(estimatedCharge).toLocaleString("en-IN")}–₹${Number(estimatedChargeMax).toLocaleString("en-IN")}. ${trackHint} — ${store.name}`;
       const wa = await sendWhatsApp({
-        phoneNumber,
+        phoneNumber: normalizedPhone,
         message,
         relatedType: "repair",
         relatedId: repair.id,
@@ -179,6 +194,20 @@ export async function PUT(req: NextRequest) {
               ? String(v || existing[key])
               : null
             : String(v).trim();
+      }
+    }
+
+    if (typeof data.phoneNumber === "string") {
+      const phoneErr = phoneValidationError(data.phoneNumber);
+      if (phoneErr) {
+        return NextResponse.json({ error: phoneErr }, { status: 400 });
+      }
+      data.phoneNumber = normalizePhoneDigits(data.phoneNumber);
+    }
+    if (data.email !== undefined && data.email !== null) {
+      const emailErr = optionalEmailValidationError(String(data.email));
+      if (emailErr) {
+        return NextResponse.json({ error: emailErr }, { status: 400 });
       }
     }
 

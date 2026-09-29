@@ -20,6 +20,12 @@ import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
 import { WipeChecklist } from "@/components/WipeChecklist";
 import { deviceIllustration } from "@/lib/illustrations";
+import {
+  EMAIL_INPUT_PATTERN,
+  EMAIL_INPUT_TITLE,
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+} from "@/lib/contact-validation";
 
 type Result = {
   trackingId: string;
@@ -439,7 +445,11 @@ function RepairForm() {
           <label className="field-label">WhatsApp number *</label>
           <input
             className="field"
+            type="tel"
+            inputMode="numeric"
             required
+            pattern={PHONE_INPUT_PATTERN}
+            title={PHONE_INPUT_TITLE}
             placeholder="10-digit mobile"
             value={form.phoneNumber}
             onChange={(e) =>
@@ -452,6 +462,8 @@ function RepairForm() {
           <input
             className="field"
             type="email"
+            pattern={EMAIL_INPUT_PATTERN}
+            title={EMAIL_INPUT_TITLE}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />

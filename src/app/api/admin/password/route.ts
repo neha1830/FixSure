@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   changeAdminPassword,
-  requireAdmin,
+  requireOwnerAdmin,
   unauthorized,
 } from "@/lib/auth";
 import { clearAdminSessionCookie } from "@/lib/admin-session";
 
 export async function PUT(req: NextRequest) {
-  if (!(await requireAdmin(req))) return unauthorized();
+  if (!(await requireOwnerAdmin(req))) return unauthorized();
 
   try {
     const body = await req.json();

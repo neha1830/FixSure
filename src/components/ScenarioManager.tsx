@@ -20,14 +20,14 @@ export type Scenario = {
 };
 
 type Props = {
-  password: string;
+  authHeaders: Record<string, string>;
   scenarios: Scenario[];
   onChanged: () => Promise<void> | void;
 };
 
 const emptyStep = (): ScenarioStep => ({ title: "", detail: "" });
 
-export function ScenarioManager({ password, scenarios, onChanged }: Props) {
+export function ScenarioManager({ authHeaders, scenarios, onChanged }: Props) {
   const [editing, setEditing] = useState<Scenario | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
@@ -116,7 +116,7 @@ export function ScenarioManager({ password, scenarios, onChanged }: Props) {
         method: creating ? "POST" : "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
+          ...authHeaders,
         },
         body: JSON.stringify(payload),
       });
@@ -141,7 +141,7 @@ export function ScenarioManager({ password, scenarios, onChanged }: Props) {
     }
     const res = await fetch(`/api/admin/scenarios?id=${s.id}`, {
       method: "DELETE",
-      headers: { "x-admin-password": password },
+      headers: { ...authHeaders },
     });
     if (!res.ok) {
       const data = await res.json();

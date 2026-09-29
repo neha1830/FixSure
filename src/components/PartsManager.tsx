@@ -24,7 +24,7 @@ export type PartItem = {
 };
 
 type Props = {
-  password: string;
+  authHeaders: Record<string, string>;
   parts: PartItem[];
   onChanged: () => Promise<void> | void;
 };
@@ -44,7 +44,7 @@ const emptyForm = {
   sortOrder: "0",
 };
 
-export function PartsManager({ password, parts, onChanged }: Props) {
+export function PartsManager({ authHeaders, parts, onChanged }: Props) {
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -89,7 +89,7 @@ export function PartsManager({ password, parts, onChanged }: Props) {
 
       const res = await fetch("/api/admin/parts", {
         method: editId ? "PUT" : "POST",
-        headers: { "x-admin-password": password },
+        headers: { ...authHeaders },
         body: fd,
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ export function PartsManager({ password, parts, onChanged }: Props) {
     if (!confirm(`Delete “${p.title}”?`)) return;
     const res = await fetch(`/api/admin/parts?id=${encodeURIComponent(p.id)}`, {
       method: "DELETE",
-      headers: { "x-admin-password": password },
+      headers: { ...authHeaders },
     });
     if (!res.ok) {
       alert("Could not delete");

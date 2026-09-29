@@ -15,6 +15,10 @@ import { useFixCatalog } from "@/lib/use-fix-catalog";
 import { EstimateModal } from "@/components/EstimateModal";
 import { PageBanner } from "@/components/PageBanner";
 import { PriceLockBadge } from "@/components/PriceLockBadge";
+import {
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+} from "@/lib/contact-validation";
 
 type Result = {
   inquiryId: string;
@@ -104,7 +108,12 @@ export default function SellPage() {
                 <label className="field-label">WhatsApp number *</label>
                 <input
                   className="field"
+                  type="tel"
+                  inputMode="numeric"
                   required
+                  pattern={PHONE_INPUT_PATTERN}
+                  title={PHONE_INPUT_TITLE}
+                  placeholder="10-digit mobile"
                   value={form.phoneNumber}
                   onChange={(e) =>
                     setForm({ ...form, phoneNumber: e.target.value })

@@ -8,7 +8,6 @@ const primaryLinks = [
   { href: "/price", label: "Check price" },
   { href: "/parts", label: "Buy parts" },
   { href: "/troubleshoot", label: "Troubleshoot" },
-  { href: "/repair", label: "Repair" },
   { href: "/sell", label: "Sell phone" },
   { href: "/track", label: "Track" },
 ];

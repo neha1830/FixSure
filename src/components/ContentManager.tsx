@@ -28,11 +28,11 @@ const TYPE_HELP: Record<string, string> = {
 const TYPES = Object.keys(TYPE_HELP);
 
 export function ContentManager({
-  password,
+  authHeaders,
   items,
   onChanged,
 }: {
-  password: string;
+  authHeaders: Record<string, string>;
   items: ContentItem[];
   onChanged: () => void;
 }) {
@@ -107,7 +107,7 @@ export function ContentManager({
         method: editing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-password": password,
+          ...authHeaders,
         },
         body: JSON.stringify(payload),
       });
@@ -127,7 +127,7 @@ export function ContentManager({
     if (!confirm("Delete this item?")) return;
     const res = await fetch(`/api/admin/content?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: { "x-admin-password": password },
+      headers: { ...authHeaders },
     });
     if (!res.ok) alert("Delete failed");
     else onChanged();
@@ -138,7 +138,7 @@ export function ContentManager({
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": password,
+        ...authHeaders,
       },
       body: JSON.stringify({ id: item.id, active: !item.active }),
     });

@@ -8,9 +8,3 @@ export const DEFAULT_PRE_CHECKLIST = [
   { key: "damage", label: "Physical damage noted" },
   { key: "data", label: "Customer data acknowledged" },
 ] as const;
-
-export const TECHNICIAN_OPTIONS = [
-  "Store technician",
-  "Senior technician",
-  "Board-level specialist",
-] as const;

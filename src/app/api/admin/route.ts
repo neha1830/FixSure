@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin, unauthorized, withAdminSession } from "@/lib/auth";
+import {
+  authenticateRequest,
+  requireAdmin,
+  unauthorized,
+  withAdminSession,
+} from "@/lib/auth";
 import {
   REPAIR_STATUSES,
   RepairStatus,
@@ -12,68 +17,112 @@ import {
 import { sendWhatsApp, getRepairTemplateSid } from "@/lib/whatsapp";
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req))) return unauthorized();
+  const auth = await authenticateRequest(req);
+  if (!auth.ok) return unauthorized();
 
-
-  const repairs = await prisma.repairRequest.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 5 } },
-  });
-
-  const sells = await prisma.sellInquiry.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-
-  const whatsapp = await prisma.whatsAppLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 30,
-  });
-
-  const store = await getStoreSettings();
-  const { listScenarios } = await import("@/lib/troubleshooting");
-  const scenarios = await listScenarios();
-  const gallery = await prisma.galleryItem.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
-
-  const contacts = await prisma.contactInquiry.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-
-  const reviews = await prisma.customerReview.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-
-  const { listContent, ensureContentSeeded } = await import(
-    "@/lib/site-content"
-  );
-  await ensureContentSeeded();
-  const content = await listContent();
-
-  const { listAllParts, ensurePartsSeeded } = await import("@/lib/parts");
-  await ensurePartsSeeded();
-  const parts = await listAllParts();
-
-  const { ensureCatalogSeeded } = await import("@/lib/catalog-store");
-  await ensureCatalogSeeded();
-
-  return withAdminSession(
-    req,
-    NextResponse.json({
+  try {
+    // Core dashboard data first — parallel, no heavy catalog seeding on login.
+    const [
       repairs,
       sells,
       whatsapp,
       store,
-      scenarios,
       gallery,
       contacts,
       reviews,
-      content,
-      parts,
-    })
-  );
+    ] = await Promise.all([
+      prisma.repairRequest.findMany({
+        orderBy: { updatedAt: "desc" },
+        include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 5 } },
+      }),
+      prisma.sellInquiry.findMany({
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.whatsAppLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      }),
+      getStoreSettings(),
+      prisma.galleryItem.findMany({
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      }),
+      prisma.contactInquiry.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+      prisma.customerReview.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+    ]);
+
+    // Secondary tabs — still parallel, but never block on full catalog seed.
+    const { listScenarios } = await import("@/lib/troubleshooting");
+    const { listContent } = await import("@/lib/site-content");
+    const { listAllParts } = await import("@/lib/parts");
+
+    const [scenarios, content, parts] = await Promise.all([
+      listScenarios().catch(() => []),
+      listContent().catch(() => []),
+      listAllParts().catch(() => []),
+    ]);
+
+    let staff: unknown[] = [];
+    let technicians: { id: string; name: string }[] = [];
+    try {
+      technicians = await prisma.storeStaff.findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      });
+    } catch {
+      technicians = [];
+    }
+    if (auth.session.role === "admin") {
+      try {
+        staff = await prisma.storeStaff.findMany({
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            staffCode: true,
+            name: true,
+            active: true,
+            allowedTabs: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      } catch {
+        staff = [];
+      }
+    }
+
+    return withAdminSession(
+      req,
+      NextResponse.json({
+        repairs,
+        sells,
+        whatsapp,
+        store,
+        scenarios,
+        gallery,
+        contacts,
+        reviews,
+        content,
+        parts,
+        staff,
+        technicians,
+        session: auth.session,
+      }),
+      auth.session
+    );
+  } catch (err) {
+    console.error("GET /api/admin failed", err);
+    return NextResponse.json(
+      { error: "Admin data load failed. Restart the dev server and try again." },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PATCH(req: NextRequest) {

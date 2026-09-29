@@ -479,56 +479,47 @@ export async function ensurePartsSeeded(): Promise<void> {
   if (!seedPromise) {
     seedPromise = (async () => {
       try {
-        for (const p of PART_SEEDS) {
-          const imageUrl = p.imageUrl || defaultImageFor(p.deviceCategory);
-          const existing = await prisma.partItem.findFirst({
-            where: { sku: p.sku },
-            select: { id: true, imageUrl: true },
+        const count = await prisma.partItem.count();
+        if (count > 0) {
+          // Only backfill missing placeholder images when the table already has rows.
+          const missingImages = await prisma.partItem.findMany({
+            where: {
+              OR: [
+                { imageUrl: null },
+                { imageUrl: "" },
+                { imageUrl: { startsWith: "/parts/" } },
+              ],
+            },
+            select: { id: true, deviceCategory: true, imageUrl: true },
+            take: 40,
           });
-
-          if (!existing) {
-            await prisma.partItem.create({
-              data: {
-                title: p.title,
-                description: p.description,
-                deviceCategory: p.deviceCategory,
-                brand: p.brand || null,
-                sku: p.sku,
-                quality: p.quality,
-                compatibility: p.compatibility,
-                price: p.price,
-                imageUrl,
-                inStock: true,
-                published: true,
-                sortOrder: p.sortOrder,
-              },
-            });
-            continue;
-          }
-
-          if (isPlaceholderImage(existing.imageUrl)) {
+          for (const row of missingImages) {
+            if (!isPlaceholderImage(row.imageUrl)) continue;
             await prisma.partItem.update({
-              where: { id: existing.id },
-              data: { imageUrl },
+              where: { id: row.id },
+              data: { imageUrl: defaultImageFor(row.deviceCategory) },
             });
           }
+          return;
         }
 
-        const missingImages = await prisma.partItem.findMany({
-          where: {
-            OR: [
-              { imageUrl: null },
-              { imageUrl: "" },
-              { imageUrl: { startsWith: "/parts/" } },
-            ],
-          },
-          select: { id: true, deviceCategory: true, imageUrl: true },
-        });
-        for (const row of missingImages) {
-          if (!isPlaceholderImage(row.imageUrl)) continue;
-          await prisma.partItem.update({
-            where: { id: row.id },
-            data: { imageUrl: defaultImageFor(row.deviceCategory) },
+        for (const p of PART_SEEDS) {
+          const imageUrl = p.imageUrl || defaultImageFor(p.deviceCategory);
+          await prisma.partItem.create({
+            data: {
+              title: p.title,
+              description: p.description,
+              deviceCategory: p.deviceCategory,
+              brand: p.brand || null,
+              sku: p.sku,
+              quality: p.quality,
+              compatibility: p.compatibility,
+              price: p.price,
+              imageUrl,
+              inStock: true,
+              published: true,
+              sortOrder: p.sortOrder,
+            },
           });
         }
       } catch (err) {

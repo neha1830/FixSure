@@ -13,11 +13,21 @@ export function adminLoginLimited(ip: string): boolean {
   const now = Date.now();
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt < now) {
-    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
     return false;
   }
+  return bucket.count >= MAX_ATTEMPTS;
+}
+
+/** Call only after a failed password/ID check. */
+export function recordFailedAdminLogin(ip: string) {
+  const key = clientKey(ip);
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt < now) {
+    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return;
+  }
   bucket.count += 1;
-  return bucket.count > MAX_ATTEMPTS;
 }
 
 export function resetAdminLoginLimit(ip: string) {

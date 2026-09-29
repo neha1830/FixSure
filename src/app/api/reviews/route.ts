@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApprovedReviews } from "@/lib/public-data";
+import {
+  normalizePhoneDigits,
+  optionalPhoneValidationError,
+} from "@/lib/contact-validation";
 
 export async function GET() {
   const reviews = await getApprovedReviews(40);
@@ -19,6 +23,11 @@ export async function POST(req: Request) {
       );
     }
 
+    const phoneErr = optionalPhoneValidationError(phoneNumber);
+    if (phoneErr) {
+      return NextResponse.json({ error: phoneErr }, { status: 400 });
+    }
+
     const stars = Math.min(5, Math.max(1, Number(rating) || 5));
 
     await prisma.customerReview.create({
@@ -26,7 +35,9 @@ export async function POST(req: Request) {
         name: String(name).trim(),
         device: device ? String(device).trim() : null,
         body: String(reviewBody).trim(),
-        phoneNumber: phoneNumber ? String(phoneNumber).trim() : null,
+        phoneNumber: phoneNumber
+          ? normalizePhoneDigits(String(phoneNumber))
+          : null,
         rating: stars,
         status: "PENDING",
       },

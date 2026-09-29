@@ -6,6 +6,11 @@ import {
 } from "@/lib/pricing-server";
 import { getEstimateValidUntil } from "@/lib/pricing";
 import { getStoreSettings } from "@/lib/store";
+import {
+  normalizePhoneDigits,
+  optionalEmailValidationError,
+  phoneValidationError,
+} from "@/lib/contact-validation";
 
 const trackingId = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
 
@@ -48,6 +53,16 @@ export async function POST(req: Request) {
       );
     }
 
+    const phoneErr = phoneValidationError(phoneNumber);
+    if (phoneErr) {
+      return NextResponse.json({ error: phoneErr }, { status: 400 });
+    }
+    const emailErr = optionalEmailValidationError(email);
+    if (emailErr) {
+      return NextResponse.json({ error: emailErr }, { status: 400 });
+    }
+    const normalizedPhone = normalizePhoneDigits(phoneNumber);
+
     if (!privacyAck) {
       return NextResponse.json(
         {
@@ -79,7 +94,7 @@ export async function POST(req: Request) {
       data: {
         trackingId: tid,
         customerName,
-        phoneNumber,
+        phoneNumber: normalizedPhone,
         email: email || null,
         deviceType: device,
         serviceMode: "STORE",

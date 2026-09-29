@@ -1,23 +1,25 @@
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { adminLoginLimited, resetAdminLoginLimit } from "./admin-rate-limit";
+import { adminLoginLimited, recordFailedAdminLogin, resetAdminLoginLimit } from "./admin-rate-limit";
 import {
-  applyAdminSessionCookie,
-  readAdminSession,
+  applySessionCookie,
+  readSession,
+  type SessionInfo,
 } from "./admin-session";
 import { prisma } from "./db";
+import { parseAllowedTabs } from "./staff-tabs";
 
 function bootstrapPassword() {
   return process.env.ADMIN_BOOTSTRAP_PASSWORD || "fixsure-admin";
 }
 
-function hashPassword(password: string): string {
+export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(password, salt, 64).toString("hex");
   return `${salt}:${hash}`;
 }
 
-function verifyPassword(password: string, stored: string): boolean {
+export function verifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
   try {
@@ -75,6 +77,22 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
   return false;
 }
 
+export async function verifyStaffLogin(
+  staffCode: string,
+  password: string
+): Promise<{ id: string; name: string; allowedTabs: string } | null> {
+  const code = String(staffCode || "").trim();
+  if (!/^\d{6}$/.test(code) || !password) return null;
+  try {
+    const row = await prisma.storeStaff.findUnique({ where: { staffCode: code } });
+    if (!row || !row.active) return null;
+    if (!verifyPassword(password, row.passwordHash)) return null;
+    return { id: row.id, name: row.name, allowedTabs: row.allowedTabs };
+  } catch {
+    return null;
+  }
+}
+
 export async function changeAdminPassword(
   currentPassword: string,
   newPassword: string
@@ -100,28 +118,111 @@ export async function changeAdminPassword(
   return { ok: true };
 }
 
-export async function requireAdmin(req: NextRequest): Promise<boolean> {
-  if (readAdminSession(req)) return true;
+export type AuthResult =
+  | { ok: true; session: SessionInfo }
+  | { ok: false };
+
+export async function authenticateRequest(
+  req: NextRequest
+): Promise<AuthResult> {
+  const existing = readSession(req);
+  if (existing) {
+    if (existing.role === "technician" && existing.staffId) {
+      try {
+        const row = await prisma.storeStaff.findUnique({
+          where: { id: existing.staffId },
+          select: { name: true, active: true, allowedTabs: true },
+        });
+        if (!row || !row.active) return { ok: false };
+        return {
+          ok: true,
+          session: {
+            role: "technician",
+            staffId: existing.staffId,
+            staffName: row.name,
+            allowedTabs: parseAllowedTabs(row.allowedTabs),
+          },
+        };
+      } catch {
+        return { ok: false };
+      }
+    }
+    return { ok: true, session: existing };
+  }
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
-  if (adminLoginLimited(ip)) return false;
+  if (adminLoginLimited(ip)) return { ok: false };
+
+  const staffCode = req.headers.get("x-staff-code") || "";
+  const staffPassword = req.headers.get("x-staff-password") || "";
+  if (staffCode || staffPassword) {
+    const staff = await verifyStaffLogin(staffCode, staffPassword);
+    if (!staff) {
+      recordFailedAdminLogin(ip);
+      return { ok: false };
+    }
+    resetAdminLoginLimit(ip);
+    return {
+      ok: true,
+      session: {
+        role: "technician",
+        staffId: staff.id,
+        staffName: staff.name,
+        allowedTabs: parseAllowedTabs(staff.allowedTabs),
+      },
+    };
+  }
 
   const password = req.headers.get("x-admin-password") || "";
   const ok = await verifyAdminPassword(password);
-  if (ok) resetAdminLoginLimit(ip);
-  return ok;
+  if (!ok) {
+    recordFailedAdminLogin(ip);
+    return { ok: false };
+  }
+  resetAdminLoginLimit(ip);
+  return { ok: true, session: { role: "admin" } };
 }
 
-export function withAdminSession(req: NextRequest, res: NextResponse) {
-  if (!readAdminSession(req) && req.headers.get("x-admin-password")) {
-    applyAdminSessionCookie(res);
+export async function requireAdmin(req: NextRequest): Promise<boolean> {
+  const result = await authenticateRequest(req);
+  return result.ok;
+}
+
+/** Owner admin only (not store technicians). */
+export async function requireOwnerAdmin(req: NextRequest): Promise<boolean> {
+  const result = await authenticateRequest(req);
+  return result.ok && result.session.role === "admin";
+}
+
+/** Attach session cookie when this request authenticated via headers (not cookie yet). */
+export function withAdminSession(
+  req: NextRequest,
+  res: NextResponse,
+  session?: SessionInfo
+) {
+  if (!readSession(req) && session) {
+    applySessionCookie(res, session);
+  } else if (!readSession(req) && req.headers.get("x-admin-password")) {
+    applySessionCookie(res, { role: "admin" });
   }
   return res;
 }
 
 export function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+export function generateStaffCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+export function generateStaffPassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  const bytes = randomBytes(8);
+  for (let i = 0; i < 8; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
 }

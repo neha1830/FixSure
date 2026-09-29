@@ -3,6 +3,12 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { PageBanner } from "@/components/PageBanner";
+import {
+  EMAIL_INPUT_PATTERN,
+  EMAIL_INPUT_TITLE,
+  PHONE_INPUT_PATTERN,
+  PHONE_INPUT_TITLE,
+} from "@/lib/contact-validation";
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false);
@@ -82,6 +88,8 @@ export default function ContactPage() {
             <input
               className="field"
               type="email"
+              pattern={EMAIL_INPUT_PATTERN}
+              title={EMAIL_INPUT_TITLE}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
@@ -90,6 +98,11 @@ export default function ContactPage() {
             <label className="field-label">Phone</label>
             <input
               className="field"
+              type="tel"
+              inputMode="numeric"
+              pattern={PHONE_INPUT_PATTERN}
+              title={PHONE_INPUT_TITLE}
+              placeholder="10-digit mobile"
               value={form.phoneNumber}
               onChange={(e) =>
                 setForm({ ...form, phoneNumber: e.target.value })

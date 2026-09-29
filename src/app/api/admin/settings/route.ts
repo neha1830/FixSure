@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, unauthorized } from "@/lib/auth";
 import { getStoreSettings, saveStoreSettings } from "@/lib/store";
 import { revalidatePublicSite } from "@/lib/revalidate-public";
+import { phoneValidationError, normalizePhoneDigits } from "@/lib/contact-validation";
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return unauthorized();
@@ -21,10 +22,15 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    const phoneErr = phoneValidationError(body.phone);
+    if (phoneErr) {
+      return NextResponse.json({ error: phoneErr }, { status: 400 });
+    }
+
     const store = await saveStoreSettings({
       name: body.name,
       address: body.address,
-      phone: body.phone,
+      phone: normalizePhoneDigits(body.phone),
       hours: body.hours,
       mapsUrl: body.mapsUrl,
       heroHeadline: body.heroHeadline,

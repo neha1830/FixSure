@@ -16,12 +16,12 @@ export type GalleryItem = {
 };
 
 type Props = {
-  password: string;
+  authHeaders: Record<string, string>;
   items: GalleryItem[];
   onChanged: () => Promise<void> | void;
 };
 
-export function GalleryManager({ password, items, onChanged }: Props) {
+export function GalleryManager({ authHeaders, items, onChanged }: Props) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -54,7 +54,7 @@ export function GalleryManager({ password, items, onChanged }: Props) {
 
       const res = await fetch("/api/admin/gallery", {
         method: "POST",
-        headers: { "x-admin-password": password },
+        headers: { ...authHeaders },
         body: fd,
       });
       const data = await res.json();
@@ -84,7 +84,7 @@ export function GalleryManager({ password, items, onChanged }: Props) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": password,
+        ...authHeaders,
       },
       body: JSON.stringify({ id: item.id, published: !item.published }),
     });
@@ -99,7 +99,7 @@ export function GalleryManager({ password, items, onChanged }: Props) {
     if (!confirm(`Delete “${item.title}”?`)) return;
     const res = await fetch(`/api/admin/gallery?id=${item.id}`, {
       method: "DELETE",
-      headers: { "x-admin-password": password },
+      headers: { ...authHeaders },
     });
     if (!res.ok) {
       alert("Delete failed");

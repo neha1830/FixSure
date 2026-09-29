@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Core dashboard data first — parallel, no heavy catalog seeding on login.
+    // Each query is isolated so a missing Neon column cannot brick login.
     const [
       repairs,
       sells,
@@ -31,29 +32,62 @@ export async function GET(req: NextRequest) {
       contacts,
       reviews,
     ] = await Promise.all([
-      prisma.repairRequest.findMany({
-        orderBy: { updatedAt: "desc" },
-        include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 5 } },
+      prisma.repairRequest
+        .findMany({
+          orderBy: { updatedAt: "desc" },
+          include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 5 } },
+        })
+        .catch((err) => {
+          console.error("admin repairs load failed", err);
+          return [];
+        }),
+      prisma.sellInquiry
+        .findMany({
+          orderBy: { createdAt: "desc" },
+        })
+        .catch((err) => {
+          console.error("admin sells load failed", err);
+          return [];
+        }),
+      prisma.whatsAppLog
+        .findMany({
+          orderBy: { createdAt: "desc" },
+          take: 30,
+        })
+        .catch((err) => {
+          console.error("admin whatsapp load failed", err);
+          return [];
+        }),
+      getStoreSettings().catch((err) => {
+        console.error("admin store load failed", err);
+        throw err;
       }),
-      prisma.sellInquiry.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.whatsAppLog.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 30,
-      }),
-      getStoreSettings(),
-      prisma.galleryItem.findMany({
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-      }),
-      prisma.contactInquiry.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      }),
-      prisma.customerReview.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      }),
+      prisma.galleryItem
+        .findMany({
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        })
+        .catch((err) => {
+          console.error("admin gallery load failed", err);
+          return [];
+        }),
+      prisma.contactInquiry
+        .findMany({
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        })
+        .catch((err) => {
+          console.error("admin contacts load failed", err);
+          return [];
+        }),
+      prisma.customerReview
+        .findMany({
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+        .catch((err) => {
+          console.error("admin reviews load failed", err);
+          return [];
+        }),
     ]);
 
     // Secondary tabs — still parallel, but never block on full catalog seed.
@@ -119,7 +153,10 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("GET /api/admin failed", err);
     return NextResponse.json(
-      { error: "Admin data load failed. Restart the dev server and try again." },
+      {
+        error:
+          "Admin data load failed. If this is production, push the latest Prisma schema to Neon (db:push:prod), then retry.",
+      },
       { status: 500 }
     );
   }

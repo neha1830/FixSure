@@ -346,6 +346,76 @@ export default function AdminPage() {
     [loginMode, password, staffCode, staffPassword]
   );
 
+  async function applyAdminPayload(data: Record<string, unknown>) {
+    if (Array.isArray(data.repairs)) setRepairs(data.repairs as Repair[]);
+    if (Array.isArray(data.sells)) setSells(data.sells as Sell[]);
+    if (Array.isArray(data.contacts)) setContacts(data.contacts as Contact[]);
+    if (Array.isArray(data.reviews)) setReviews(data.reviews as Review[]);
+    if (Array.isArray(data.content)) setContent(data.content as ContentItem[]);
+    if (Array.isArray(data.parts)) setParts(data.parts as PartItem[]);
+    if (Array.isArray(data.whatsapp)) setWhatsapp(data.whatsapp as WaLog[]);
+    if (Array.isArray(data.scenarios)) setScenarios(data.scenarios as Scenario[]);
+    if (Array.isArray(data.gallery)) setGallery(data.gallery as GalleryItem[]);
+    if (Array.isArray(data.staff)) setStaffList(data.staff as Staff[]);
+    if (Array.isArray(data.technicians)) {
+      setTechnicians(data.technicians as { id: string; name: string }[]);
+    }
+    const session = data.session as
+      | { role?: AdminLoginMode; staffName?: string; allowedTabs?: string[] }
+      | undefined;
+    if (session?.role) {
+      setSessionRole(session.role);
+      setSessionName(session.staffName || "");
+      if (session.role === "technician") {
+        const tabs = session.allowedTabs || DEFAULT_STAFF_TABS;
+        setAllowedTabs(tabs);
+        setTab((prev) =>
+          tabs.includes(prev) ? prev : (tabs[0] as typeof prev) || "repairs"
+        );
+      } else {
+        setAllowedTabs([]);
+      }
+    }
+    const store = data.store as Record<string, unknown> | undefined;
+    if (store) {
+      setStoreForm({
+        ...emptyStore,
+        name: String(store.name || "PhoneRepairO"),
+        address: String(store.address || ""),
+        phone: String(store.phone || ""),
+        hours: String(store.hours || ""),
+        mapsUrl: String(store.mapsUrl || ""),
+        heroHeadline: String(store.heroHeadline || ""),
+        heroSubtext: String(store.heroSubtext || ""),
+        heroBadge: String(store.heroBadge || ""),
+        seoTitle: String(store.seoTitle || ""),
+        seoDescription: String(store.seoDescription || ""),
+        trustIntro: String(store.trustIntro || ""),
+        privacyBlurb: String(store.privacyBlurb || ""),
+        warrantyDays: String(store.warrantyDays ?? 90),
+        doorstepMinutes: String(store.doorstepMinutes ?? 90),
+        priceLockDays: String(store.priceLockDays ?? 7),
+        doorstepFee: String(store.doorstepFee ?? 299),
+        requestValidDays: String(store.requestValidDays ?? 3),
+        ctaPrimaryLabel: String(store.ctaPrimaryLabel || "Check price"),
+        ctaPrimaryHref: String(store.ctaPrimaryHref || "/price"),
+        ctaSecondaryLabel: String(store.ctaSecondaryLabel || "Book repair"),
+        ctaSecondaryHref: String(store.ctaSecondaryHref || "/repair"),
+      });
+    }
+  }
+
+  async function loadExtra(headers: Record<string, string>) {
+    try {
+      const res = await fetch("/api/admin?scope=extra", { headers });
+      if (!res.ok) return;
+      const data = await res.json();
+      await applyAdminPayload(data);
+    } catch {
+      /* extras are non-blocking */
+    }
+  }
+
   async function load(opts?: { refresh?: boolean; mode?: AdminLoginMode }) {
     const mode = opts?.mode ?? loginMode;
     if (opts?.refresh) setRefreshing(true);
@@ -357,7 +427,8 @@ export default function AdminPage() {
         staffCode,
         staffPassword,
       });
-      const res = await fetch("/api/admin", { headers });
+      // Core first so login feels fast; secondary tabs load right after.
+      const res = await fetch("/api/admin?scope=core", { headers });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) throw new Error("Unauthorized");
@@ -366,58 +437,12 @@ export default function AdminPage() {
         );
       }
       const data = await res.json();
-      setRepairs(data.repairs);
-      setSells(data.sells);
-      setContacts(data.contacts || []);
-      setReviews(data.reviews || []);
-      setContent(data.content || []);
-      setParts(data.parts || []);
-      setWhatsapp(data.whatsapp);
-      setScenarios(data.scenarios || []);
-      setGallery(data.gallery || []);
-      setStaffList(data.staff || []);
-      setTechnicians(data.technicians || []);
-      if (data.session?.role) {
-        setSessionRole(data.session.role);
-        setSessionName(data.session.staffName || "");
-        if (data.session.role === "technician") {
-          const tabs = data.session.allowedTabs || DEFAULT_STAFF_TABS;
-          setAllowedTabs(tabs);
-          setTab((prev) =>
-            tabs.includes(prev) ? prev : (tabs[0] as typeof prev) || "repairs"
-          );
-        } else {
-          setAllowedTabs([]);
-        }
-      }
-      if (data.store) {
-        setStoreForm({
-          ...emptyStore,
-          name: data.store.name || "PhoneRepairO",
-          address: data.store.address || "",
-          phone: data.store.phone || "",
-          hours: data.store.hours || "",
-          mapsUrl: data.store.mapsUrl || "",
-          heroHeadline: data.store.heroHeadline || "",
-          heroSubtext: data.store.heroSubtext || "",
-          heroBadge: data.store.heroBadge || "",
-          seoTitle: data.store.seoTitle || "",
-          seoDescription: data.store.seoDescription || "",
-          trustIntro: data.store.trustIntro || "",
-          privacyBlurb: data.store.privacyBlurb || "",
-          warrantyDays: String(data.store.warrantyDays ?? 90),
-          doorstepMinutes: String(data.store.doorstepMinutes ?? 90),
-          priceLockDays: String(data.store.priceLockDays ?? 7),
-          doorstepFee: String(data.store.doorstepFee ?? 299),
-          requestValidDays: String(data.store.requestValidDays ?? 3),
-          ctaPrimaryLabel: data.store.ctaPrimaryLabel || "Check price",
-          ctaPrimaryHref: data.store.ctaPrimaryHref || "/price",
-          ctaSecondaryLabel: data.store.ctaSecondaryLabel || "Book repair",
-          ctaSecondaryHref: data.store.ctaSecondaryHref || "/repair",
-        });
-      }
+      await applyAdminPayload(data);
       setAuthed(true);
       setLoginMode(mode);
+      setLoading(false);
+      setRefreshing(false);
+      void loadExtra(headers);
     } catch (err) {
       alert(
         err instanceof Error && err.message !== "Unauthorized"
@@ -427,7 +452,6 @@ export default function AdminPage() {
             : "Wrong password"
       );
       setAuthed(false);
-    } finally {
       setLoading(false);
       setRefreshing(false);
     }

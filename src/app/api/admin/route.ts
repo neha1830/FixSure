@@ -16,138 +16,145 @@ import {
 } from "@/lib/store";
 import { sendWhatsApp, getRepairTemplateSid } from "@/lib/whatsapp";
 
-export async function GET(req: NextRequest) {
-  const auth = await authenticateRequest(req);
-  if (!auth.ok) return unauthorized();
+async function loadCoreDashboard(role: string) {
+  const [
+    repairs,
+    sells,
+    store,
+    contacts,
+    technicians,
+    staff,
+  ] = await Promise.all([
+    prisma.repairRequest
+      .findMany({
+        orderBy: { updatedAt: "desc" },
+        take: 150,
+        include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 3 } },
+      })
+      .catch((err) => {
+        console.error("admin repairs load failed", err);
+        return [];
+      }),
+    prisma.sellInquiry
+      .findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      })
+      .catch((err) => {
+        console.error("admin sells load failed", err);
+        return [];
+      }),
+    getStoreSettings().catch((err) => {
+      console.error("admin store load failed", err);
+      throw err;
+    }),
+    prisma.contactInquiry
+      .findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      })
+      .catch((err) => {
+        console.error("admin contacts load failed", err);
+        return [];
+      }),
+    prisma.storeStaff
+      .findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      })
+      .catch(() => []),
+    role === "admin"
+      ? prisma.storeStaff
+          .findMany({
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              staffCode: true,
+              name: true,
+              active: true,
+              allowedTabs: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+  ]);
 
-  try {
-    // Core dashboard data first — parallel, no heavy catalog seeding on login.
-    // Each query is isolated so a missing Neon column cannot brick login.
-    const [
-      repairs,
-      sells,
-      whatsapp,
-      store,
-      gallery,
-      contacts,
-      reviews,
-    ] = await Promise.all([
-      prisma.repairRequest
-        .findMany({
-          orderBy: { updatedAt: "desc" },
-          include: { statusLogs: { orderBy: { createdAt: "desc" }, take: 5 } },
-        })
-        .catch((err) => {
-          console.error("admin repairs load failed", err);
-          return [];
-        }),
-      prisma.sellInquiry
-        .findMany({
-          orderBy: { createdAt: "desc" },
-        })
-        .catch((err) => {
-          console.error("admin sells load failed", err);
-          return [];
-        }),
+  return { repairs, sells, store, contacts, technicians, staff };
+}
+
+async function loadExtraDashboard() {
+  const { listScenarios } = await import("@/lib/troubleshooting");
+  const { listContent } = await import("@/lib/site-content");
+  const { listAllParts } = await import("@/lib/parts");
+
+  const [whatsapp, gallery, reviews, scenarios, content, parts] =
+    await Promise.all([
       prisma.whatsAppLog
         .findMany({
           orderBy: { createdAt: "desc" },
           take: 30,
         })
-        .catch((err) => {
-          console.error("admin whatsapp load failed", err);
-          return [];
-        }),
-      getStoreSettings().catch((err) => {
-        console.error("admin store load failed", err);
-        throw err;
-      }),
+        .catch(() => []),
       prisma.galleryItem
         .findMany({
           orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+          take: 60,
         })
-        .catch((err) => {
-          console.error("admin gallery load failed", err);
-          return [];
-        }),
-      prisma.contactInquiry
-        .findMany({
-          orderBy: { createdAt: "desc" },
-          take: 100,
-        })
-        .catch((err) => {
-          console.error("admin contacts load failed", err);
-          return [];
-        }),
+        .catch(() => []),
       prisma.customerReview
         .findMany({
           orderBy: { createdAt: "desc" },
           take: 50,
         })
-        .catch((err) => {
-          console.error("admin reviews load failed", err);
-          return [];
-        }),
-    ]);
-
-    // Secondary tabs — still parallel, but never block on full catalog seed.
-    const { listScenarios } = await import("@/lib/troubleshooting");
-    const { listContent } = await import("@/lib/site-content");
-    const { listAllParts } = await import("@/lib/parts");
-
-    const [scenarios, content, parts] = await Promise.all([
+        .catch(() => []),
       listScenarios().catch(() => []),
       listContent().catch(() => []),
       listAllParts().catch(() => []),
     ]);
 
-    let staff: unknown[] = [];
-    let technicians: { id: string; name: string }[] = [];
-    try {
-      technicians = await prisma.storeStaff.findMany({
-        where: { active: true },
-        orderBy: { name: "asc" },
-        select: { id: true, name: true },
-      });
-    } catch {
-      technicians = [];
+  return { whatsapp, gallery, reviews, scenarios, content, parts };
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await authenticateRequest(req);
+  if (!auth.ok) return unauthorized();
+
+  const scope = req.nextUrl.searchParams.get("scope") || "core";
+
+  try {
+    if (scope === "extra") {
+      const extra = await loadExtraDashboard();
+      return withAdminSession(
+        req,
+        NextResponse.json({ ...extra, session: auth.session }),
+        auth.session
+      );
     }
-    if (auth.session.role === "admin") {
-      try {
-        staff = await prisma.storeStaff.findMany({
-          orderBy: { createdAt: "desc" },
-          select: {
-            id: true,
-            staffCode: true,
-            name: true,
-            active: true,
-            allowedTabs: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
-      } catch {
-        staff = [];
-      }
+
+    // Fast login path: core lists only. Client fetches scope=extra after paint.
+    const core = await loadCoreDashboard(auth.session.role);
+    const payload: Record<string, unknown> = {
+      ...core,
+      whatsapp: [],
+      scenarios: [],
+      gallery: [],
+      reviews: [],
+      content: [],
+      parts: [],
+      session: auth.session,
+    };
+
+    if (scope === "full") {
+      const extra = await loadExtraDashboard();
+      Object.assign(payload, extra);
     }
 
     return withAdminSession(
       req,
-      NextResponse.json({
-        repairs,
-        sells,
-        whatsapp,
-        store,
-        scenarios,
-        gallery,
-        contacts,
-        reviews,
-        content,
-        parts,
-        staff,
-        technicians,
-        session: auth.session,
-      }),
+      NextResponse.json(payload),
       auth.session
     );
   } catch (err) {
